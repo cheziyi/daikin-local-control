@@ -108,6 +108,16 @@ describe("discoverDevices", () => {
     ]);
   });
 
+  it("ignores a datagram whose ret is not OK", async () => {
+    const discovery = discoverDevices();
+    socket.receive("192.168.1.9", "hello");
+    socket.receive("192.168.1.10", "ret=PARAM NG,type=aircon");
+    socket.receive("192.168.1.50", "ret=OK,type=aircon");
+    await vi.runAllTimersAsync();
+
+    expect(await discovery).toMatchObject([{ host: "192.168.1.50" }]);
+  });
+
   it("resolves with no devices when none reply", async () => {
     const discovery = discoverDevices();
     await vi.runAllTimersAsync();

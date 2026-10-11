@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DaikinError } from "../../../error.js";
-import { assertClassicOk, parseClassicKeyValue } from "../keyValue.js";
+import {
+  assertClassicOk,
+  isClassicOk,
+  parseClassicKeyValue,
+} from "../keyValue.js";
 
 describe("parseClassicKeyValue", () => {
   it("splits a reply into its fields", () => {
@@ -31,6 +35,17 @@ describe("parseClassicKeyValue", () => {
       pow: "1",
     });
     expect(parseClassicKeyValue("")).toEqual({});
+  });
+});
+
+describe("isClassicOk", () => {
+  it("is true when ret is OK", () => {
+    expect(isClassicOk({ ret: "OK" })).toBe(true);
+  });
+
+  it("is false for any other ret, and for a reply without ret", () => {
+    expect(isClassicOk({ ret: "PARAM NG" })).toBe(false);
+    expect(isClassicOk({ pow: "1" })).toBe(false);
   });
 });
 
