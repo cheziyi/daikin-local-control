@@ -1,10 +1,11 @@
 # daikin-local-control
 
-A TypeScript client for controlling Daikin air-conditioner Wi-Fi adapters **over
-the local network**, with no cloud dependency. It implements the same
-local-control protocol as the **DAIKIN Mobile Controller** app, so it works with
-the units and Wi-Fi adapters that app supports — split / multi-split and SkyAir
-units fitted with adapters such as the BRP072A42, BRP072C42 and BRP084 — in the
+A TypeScript and Node.js client for controlling Daikin air conditioners **over
+the local network** (LAN), through their Wi-Fi adapters and with no cloud
+dependency. It implements the same local-control protocol as the **DAIKIN Mobile
+Controller** app, so it works with the units and Wi-Fi adapters that app
+supports — split / multi-split and SkyAir units fitted with adapters such as the
+BRP072A42, BRP072C42 and BRP084 — in the
 [markets where that app is used](#coverage--limitations).
 
 Daikin Wi-Fi adapters come in two generations, and the package has a client for
@@ -18,6 +19,17 @@ each:
 
 You normally don't pick one yourself: `createDaikinClient` chooses the right
 client for each discovered device.
+
+## Installation
+
+```bash
+npm install daikin-local-control
+```
+
+It needs Node 22.19 or later, and its types are included.
+
+Before `1.0.0`, only a minor release (`0.1.x` to `0.2.0`) can require changes
+to your code, and the `^` range npm saves by default never crosses one.
 
 ## Usage
 
@@ -294,6 +306,11 @@ pnpm fix              # check, applying safe fixes
 ```
 
 `pnpm install` sets up a [lefthook](https://lefthook.dev) pre-commit hook that runs `pnpm fix` on staged files.
+
+To release, push a tag `vX.Y.Z`, or publish a GitHub release that creates it:
+CI sets the version from the tag and publishes to npm.
+[AGENTS.md](AGENTS.md#version-the-package-with-semver) says which number to
+pick.
 
 ## Legal disclaimer
 
