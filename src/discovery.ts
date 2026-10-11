@@ -1,5 +1,8 @@
 import { createSocket } from "node:dgram";
-import { parseClassicKeyValue } from "./codecs/classic/keyValue.js";
+import {
+  isClassicOk,
+  parseClassicKeyValue,
+} from "./codecs/classic/keyValue.js";
 import { parseDevice } from "./codecs/device.js";
 import type { DaikinDevice } from "./models/device.js";
 
@@ -24,6 +27,8 @@ export interface DiscoverDevicesOptions {
  * UDP port 30050 and collects the `basic_info` replies, which carry the same
  * `key=value` payload as the HTTP `/common/basic_info`. Classic and DSIOT
  * adapters both answer, and `parseDevice` picks the protocol from the reply.
+ * Anything on the LAN can send to the port it listens on, so it ignores a
+ * datagram whose `ret` is not `OK`.
  *
  * It resolves once `timeoutInMs` has passed, never earlier, with one device
  * per replying address. It binds UDP port 30000, and rejects with the socket's
@@ -57,6 +62,9 @@ export async function discoverDevices(
         return;
       }
       const fields = parseClassicKeyValue(message.toString("utf8"));
+      if (!isClassicOk(fields)) {
+        return;
+      }
       devices.set(remote.address, parseDevice(remote.address, fields));
     });
 
