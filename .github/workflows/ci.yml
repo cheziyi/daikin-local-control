@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    # A prerelease tag such as v1.0.0-beta.1 does not match, so it publishes nothing.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Installs the pnpm in `packageManager` and the Node in `.nvmrc`, then runs `pnpm install`.
+      - uses: pnpm/setup@v3
+      - run: pnpm check
+      - run: pnpm test
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      # Setting any permission drops the rest, and actions/checkout needs this one.
+      contents: read
+      # npm takes the job's OIDC token in place of a stored npm token.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v3
+      - run: pnpm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+      - run: pnpm build
+      # pnpm refuses to publish from a detached tag or with package.json modified, and this job has both.
+      - run: pnpm publish --no-git-checks
