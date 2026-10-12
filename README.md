@@ -183,6 +183,10 @@ values this unit takes under the plural of the state field each one limits:
 `getSensors()` resolves with `indoorTemperatureInC`, `outdoorTemperatureInC`
 and `indoorHumidityInPercent`, each `null` when the unit does not report it.
 
+Call `getStateAndSensors()` when you want both: it resolves with
+`{ state, sensors }`, and a DSIOT adapter answers it in one request, where
+`getState()` then `getSensors()` sends the same request twice.
+
 ### Changing state
 
 Pass `setState()` only the fields to change: a field left out keeps the value
@@ -201,6 +205,21 @@ given, whether or not the unit lists it.
 
 `setState()` takes no `specialModes`: turn one on or off with
 [`setSpecialMode()`](#extended-controls), which only a classic adapter has.
+
+Pass `maxStateAgeForSetStateInMs` to `createDaikinClient` when you poll the
+state anyway: `setState()` reads the unit before each write, and with it builds
+the write from a `getState()` or `getStateAndSensors()` reply younger than that
+instead. It changes no read: `getState()` asks the unit every time.
+
+```ts
+const client = createDaikinClient(device, {
+  terminalUuid: savedUuid,
+  maxStateAgeForSetStateInMs: 30_000, // your poll interval, in milliseconds
+});
+```
+
+The write undoes a change made on the remote control since that reply:
+[DESIGN.md](DESIGN.md#the-read-before-a-write) says how.
 
 ### Extended controls
 

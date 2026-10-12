@@ -154,4 +154,27 @@ describe("createDaikinClient", () => {
       expect(adapter.received).toHaveLength(2);
     },
   );
+
+  it.each([
+    ["classic", CLASSIC_REPLY, "/aircon/get_control_info"],
+    ["dsiot", DSIOT_REPLY, "/dsiot/multireq"],
+  ] as const)(
+    "has a %s setState write over a getState reply younger than options.maxStateAgeForSetStateInMs",
+    async (protocol, reply, statePath) => {
+      const adapter = await startMockAdapter(reply);
+      const client = clientFor(
+        { host: adapter.host, protocol },
+        { maxStateAgeForSetStateInMs: 60_000 },
+      );
+
+      await client.getState();
+      await client.setState({ power: true });
+
+      expect(
+        adapter.received.filter(
+          ({ method, url }) => method !== "PUT" && url === statePath,
+        ),
+      ).toHaveLength(1);
+    },
+  );
 });

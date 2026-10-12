@@ -103,8 +103,8 @@ export interface DaikinState {
 }
 
 /** A partial `DaikinState`, as `DaikinClient.setState` takes it: set only the
- * fields to change. The client reads the current state, overlays the control,
- * and writes the whole state back. It drops a field the unit does not take in
+ * fields to change. The client overlays the control on the state the unit
+ * holds, and writes the whole state back. It drops a field the unit does not take in
  * the target mode, such as a louver position outside
  * `DaikinCapabilities.verticalPositions`. It takes no `specialModes`: a
  * classic adapter is set one with `ClassicDaikinClient.setSpecialMode`, and
@@ -116,4 +116,9 @@ export interface DaikinSensors {
   indoorTemperatureInC: number | null;
   outdoorTemperatureInC: number | null;
   indoorHumidityInPercent: number | null;
+}
+
+export interface DaikinStateAndSensors {
+  state: DaikinState;
+  sensors: DaikinSensors;
 }

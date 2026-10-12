@@ -43,6 +43,7 @@ import type {
   DaikinControl,
   DaikinSensors,
   DaikinState,
+  DaikinStateAndSensors,
   SpecialMode,
 } from "../models/state.js";
 import {
@@ -52,6 +53,7 @@ import {
   withRetry,
 } from "../transport.js";
 import type { DaikinClient } from "./client.js";
+import { SetStateCache } from "./setStateCache.js";
 
 // Classic CGI endpoints (BRP069-style). Reads and writes are both HTTP GET with
 // query parameters; the reply is `key=value,key=value`.
@@ -85,12 +87,18 @@ export class ClassicDaikinClient implements DaikinClient {
   // A unit's capabilities don't change, and `setState` needs them, so they are
   // read once.
   private capabilityFields: Promise<Record<string, string>> | undefined;
+  private readonly setStateCache: SetStateCache;
 
-  /** `close` closes `transport`, so give each client a transport of its own. */
+  /** `close` closes `transport`, so give each client a transport of its own.
+   * `maxStateAgeForSetStateInMs` defaults to 0: see
+   * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   constructor(
     private readonly transport: DaikinTransport,
     private readonly retryOptions?: DaikinRetryOptions,
-  ) {}
+    maxStateAgeForSetStateInMs = 0,
+  ) {
+    this.setStateCache = new SetStateCache(maxStateAgeForSetStateInMs);
+  }
 
   close(): Promise<void> {
     return this.transport.close();
@@ -105,12 +113,14 @@ export class ClassicDaikinClient implements DaikinClient {
   }
 
   async getState(): Promise<DaikinState> {
-    return parseClassicState(await this.command(CLASSIC_ROUTES.getControlInfo));
+    return parseClassicState(await this.readControlInfo());
   }
 
   async setState(control: DaikinControl): Promise<void> {
     const capabilityFields = await this.readCapabilityFields();
-    const current = await this.command(CLASSIC_ROUTES.getControlInfo);
+    const current =
+      this.setStateCache.get() ??
+      (await this.command(CLASSIC_ROUTES.getControlInfo));
     await this.command(
       CLASSIC_ROUTES.setControlInfo,
       applyClassicControl(current, control, capabilityFields),
@@ -121,6 +131,10 @@ export class ClassicDaikinClient implements DaikinClient {
     return parseClassicSensors(
       await this.command(CLASSIC_ROUTES.getSensorInfo),
     );
+  }
+
+  async getStateAndSensors(): Promise<DaikinStateAndSensors> {
+    return { state: await this.getState(), sensors: await this.getSensors() };
   }
 
   // --- extended controls ---------------------------------------------------
@@ -284,10 +298,25 @@ export class ClassicDaikinClient implements DaikinClient {
         path,
         ...(parameters ? { query: parameters } : {}),
       });
-    const fields = parseClassicKeyValue(
-      await (retry ? withRetry(send, this.retryOptions) : send()),
-    );
-    assertClassicOk(fields);
+    try {
+      const fields = parseClassicKeyValue(
+        await (retry ? withRetry(send, this.retryOptions) : send()),
+      );
+      assertClassicOk(fields);
+      return fields;
+    } finally {
+      // Every request that changes the unit takes parameters, and any of them
+      // may change what `get_control_info` answers, even one that failed: a
+      // request that timed out may still have reached the unit.
+      if (parameters) {
+        this.setStateCache.clear();
+      }
+    }
+  }
+
+  private async readControlInfo(): Promise<Record<string, string>> {
+    const fields = await this.command(CLASSIC_ROUTES.getControlInfo);
+    this.setStateCache.set(fields);
     return fields;
   }
 

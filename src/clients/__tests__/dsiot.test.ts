@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   INDOOR_STATUS,
   modeLeaf,
@@ -68,6 +68,10 @@ function adapter(reply: string): MockDaikinTransport {
 
 function dsiotClient(transport: MockDaikinTransport): DsiotDaikinClient {
   return new DsiotDaikinClient(transport.asTransport());
+}
+
+function methodsSentTo(transport: MockDaikinTransport): string[] {
+  return transport.sent.map(({ method }) => method);
 }
 
 describe("DsiotDaikinClient", () => {
@@ -159,6 +163,142 @@ describe("DsiotDaikinClient", () => {
           { path: modeLeaf("p_09"), value: "0A00" },
         ]),
       );
+    });
+
+    it("reads the indoor status again after getState, without a maxStateAgeForSetStateInMs", async () => {
+      const transport = adapter(read(INDOOR_STATUS));
+      const client = dsiotClient(transport);
+
+      await client.getState();
+      await client.setState({ power: true });
+
+      expect(methodsSentTo(transport)).toEqual(["POST", "POST", "PUT"]);
+    });
+
+    describe("with a maxStateAgeForSetStateInMs", () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      function reusingClient(
+        transport: MockDaikinTransport,
+      ): DsiotDaikinClient {
+        vi.useFakeTimers();
+        return new DsiotDaikinClient(
+          transport.asTransport(),
+          undefined,
+          60_000,
+        );
+      }
+
+      it("applies the control to the status getState read, without reading again", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(59_999);
+        await client.setState({ power: true, targetTemperatureInC: 22 });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "PUT"]);
+        expect(transport.sent.at(-1)?.jsonBody).toEqual(
+          buildDsiotMultireqUpdate([
+            { path: DSIOT_PATHS.power, value: "01" },
+            { path: DSIOT_PATHS.powerTransition, value: "00" },
+            { path: DSIOT_PATHS.mode, value: "0200" },
+            { path: modeLeaf("p_02"), value: "2c" },
+          ]),
+        );
+      });
+
+      it("applies the control to the status getStateAndSensors read", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getStateAndSensors();
+        await client.setState({ power: true });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "PUT"]);
+      });
+
+      it("reads the indoor status again once the reply is that old", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(60_000);
+        await client.setState({ power: true });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "POST", "PUT"]);
+      });
+
+      it("reads the indoor status again for the write after a write", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.setState({ mode: "heat" });
+        await client.setState({ targetTemperatureInC: 22 });
+
+        expect(methodsSentTo(transport)).toEqual([
+          "POST",
+          "PUT",
+          "POST",
+          "PUT",
+        ]);
+      });
+
+      it("reads the indoor status again after multireqUpdate", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.multireqUpdate([{ path: DSIOT_PATHS.power, value: "01" }]);
+        await client.setState({ power: false });
+
+        expect(methodsSentTo(transport)).toEqual([
+          "POST",
+          "PUT",
+          "POST",
+          "PUT",
+        ]);
+      });
+    });
+  });
+
+  describe("getStateAndSensors", () => {
+    it("parses the state and the sensors from one read of the indoor and outdoor status", async () => {
+      const transport = adapter(
+        read(INDOOR_STATUS, { [DSIOT_PATHS.outdoorTemperature]: "3E00" }),
+      );
+
+      expect(await dsiotClient(transport).getStateAndSensors()).toEqual({
+        state: {
+          power: false,
+          mode: "cool",
+          targetTemperatureInC: 24,
+          targetHumidity: null,
+          fanSpeed: "auto",
+          swingMode: "vertical",
+          verticalPosition: "swing",
+          horizontalPosition: "stop",
+          specialModes: [],
+        },
+        sensors: {
+          indoorTemperatureInC: 26,
+          indoorHumidityInPercent: 55,
+          outdoorTemperatureInC: 31,
+        },
+      });
+      expect(transport.sent).toStrictEqual([
+        {
+          method: "POST",
+          path: MULTIREQ,
+          jsonBody: buildDsiotMultireqGet([
+            DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
+          ]),
+        },
+      ]);
     });
   });
 
