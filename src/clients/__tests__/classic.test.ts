@@ -330,10 +330,12 @@ describe("ClassicDaikinClient", () => {
   describe("getDeviceInfo", () => {
     it("reads basic_info into a DaikinDeviceInfo", async () => {
       const transport = adapter({
-        [BASIC_INFO]: "ret=OK,type=aircon,ver=1_2_51,mac=A408EACC91D4",
+        [BASIC_INFO]:
+          "ret=OK,type=aircon,ver=1_2_51,name=Bedroom,mac=A408EACC91D4",
       });
 
       expect(await classicClient(transport).getDeviceInfo()).toEqual({
+        name: "Bedroom",
         macAddress: "A4:08:EA:CC:91:D4",
         firmwareVersion: "1.2.51",
       });

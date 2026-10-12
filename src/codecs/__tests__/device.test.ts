@@ -139,15 +139,19 @@ describe("parseDevice", () => {
 });
 
 describe("parseDeviceInfo", () => {
-  it("reads the MAC address and firmware version alone", () => {
+  it("reads the name, MAC address and firmware version alone", () => {
     expect(
       parseDeviceInfo({
         ret: "OK",
         type: "aircon",
-        name: "Bedroom",
+        name: "Living+room",
         mac: "A408EACC91D4",
         ver: "1_2_51",
       }),
-    ).toEqual({ macAddress: "A4:08:EA:CC:91:D4", firmwareVersion: "1.2.51" });
+    ).toEqual({
+      name: "Living room",
+      macAddress: "A4:08:EA:CC:91:D4",
+      firmwareVersion: "1.2.51",
+    });
   });
 });

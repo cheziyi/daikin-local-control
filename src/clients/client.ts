@@ -13,7 +13,7 @@ import type {
  * `ClassicDaikinClient.registerTerminal`. Every method rejects with a
  * `DaikinError` when its request fails. */
 export interface DaikinClient {
-  /** The adapter's MAC address and firmware version. */
+  /** The adapter's name, MAC address and firmware version. */
   getDeviceInfo(): Promise<DaikinDeviceInfo>;
 
   /** The unit's supported features. */

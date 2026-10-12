@@ -23,7 +23,7 @@ To add one, pin down the request and reply first, then delete its row.
 | Power draw: classic `mompow` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_A005.p_01` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
 | Compressor frequency: classic `cmpfreq` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_2006.p_04` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
 | Error code: classic `err` in `/aircon/get_sensor_info` and `/common/basic_info` | Which code on the unit's display each number stands for. | `ClassicDaikinClient.command()` |
-| Reading the settings of a DSIOT adapter: LED, holiday mode, name, icon, group | The value encoding of each `adp_d` leaf. | `DsiotDaikinClient.multireqGet()` |
+| Reading the settings of a DSIOT adapter: LED, holiday mode, icon, group | The value encoding of each `adp_d` leaf. | `DsiotDaikinClient.multireqGet()` |
 | Special modes through `setState`, and on a DSIOT adapter at all | Whether a DSIOT adapter accepts a write to the leaves `getState` reads, and which value turns a mode on. | `ClassicDaikinClient.setSpecialMode()`, `DsiotDaikinClient.multireqUpdate()` |
 | Classic `powerful` and `econo` on a unit whose `cpv` is not 3, or whose `cpv_minor` is `00` or missing | Whether such a unit takes them. `getCapabilities` lists neither for it, whatever its `en_spmode`. | `ClassicDaikinClient.setSpecialMode()` |
 | `econo` in fan mode | Whether a unit takes it. `getCapabilities` lists it in every mode but fan. | `ClassicDaikinClient.setSpecialMode()` |
