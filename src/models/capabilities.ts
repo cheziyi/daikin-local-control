@@ -35,12 +35,12 @@ export interface DaikinCapabilities {
   horizontalPositions: readonly HorizontalPosition[];
   /** Setpoint range per mode; `null` where the mode has no setpoint or the unit
    * does not offer the mode. */
-  targetTemperatureInC: Readonly<
+  targetTemperaturesInC: Readonly<
     Record<OperatingMode, TemperatureRange | null>
   >;
   /** Humidity settings per mode; empty where the mode has none or the unit does
    * not offer it. A percentage is listed for no unit: see UNSUPPORTED.md. */
-  targetHumidity: Readonly<Record<OperatingMode, readonly TargetHumidity[]>>;
+  targetHumidities: Readonly<Record<OperatingMode, readonly TargetHumidity[]>>;
   /** Whether the unit has the special air outlet, which heat can swing
    * through. That swing is not modelled: see UNSUPPORTED.md. */
   specialOutlet: boolean;

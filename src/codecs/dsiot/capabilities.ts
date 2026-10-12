@@ -82,7 +82,7 @@ export function parseDsiotCapabilities(
     horizontalPositions: horizontal
       ? horizontalPositions(louverMask(values, "horizontal"))
       : [],
-    targetTemperatureInC: {
+    targetTemperaturesInC: {
       auto: offered("auto", { min: 18, max: 30, step: 0.5 }),
       cool: offered(
         "cool",
@@ -95,7 +95,7 @@ export function parseDsiotCapabilities(
       dehumidify: null,
       fan: null,
     },
-    targetHumidity: {
+    targetHumidities: {
       auto: humiditySettings("auto"),
       // Dehumidify takes no off.
       dehumidify: humiditySettings("dehumidify").filter(

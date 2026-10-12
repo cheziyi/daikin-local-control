@@ -201,12 +201,12 @@ describe("DsiotDaikinClient", () => {
           ]),
         },
       ]);
-      expect(capabilities.targetTemperatureInC.cool).toEqual({
+      expect(capabilities.targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 28,
         step: 0.5,
       });
-      expect(capabilities.targetTemperatureInC.dehumidify).toBeNull();
+      expect(capabilities.targetTemperaturesInC.dehumidify).toBeNull();
       expect(capabilities.fanSpeeds).toContain("level5");
       expect(capabilities.swingModes).toEqual([
         "off",

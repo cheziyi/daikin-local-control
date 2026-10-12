@@ -86,7 +86,7 @@ export function parseClassicCapabilities(
     swingModes: swingModes(fields),
     verticalPositions: threeD ? verticalPositions(fields) : [],
     horizontalPositions: threeD ? horizontalPositions(fields) : [],
-    targetTemperatureInC: {
+    targetTemperaturesInC: {
       // Only `subtype=qa` units report an auto range; the rest are fixed.
       auto: offered(
         "auto",
@@ -99,7 +99,7 @@ export function parseClassicCapabilities(
       dehumidify: null,
       fan: null,
     },
-    targetHumidity: targetHumidity(fields, modern, offeredModes),
+    targetHumidities: targetHumidities(fields, modern, offeredModes),
     specialOutlet: cpv === "3" && fields.airoutlet_pv === "0",
     energyMonitoring: fields.elec === "1",
     demandControl: fields.adp_kind === "4" && fields.dmnd === "1",
@@ -157,7 +157,7 @@ export function takesClassicHumidity(fields: Record<string, string>): boolean {
   return fields.subtype !== "qa";
 }
 
-function targetHumidity(
+function targetHumidities(
   fields: Record<string, string>,
   modern: boolean,
   offeredModes: OperatingMode[],
@@ -211,13 +211,13 @@ export function takesClassicDirection(fields: Record<string, string>): boolean {
 // fixed positions (only when `s_fdir_ud_step=5`). Stop is offered unless a
 // fixed position is.
 function verticalPositions(fields: Record<string, string>): VerticalPosition[] {
-  const stopOrSwing: VerticalPosition[] = ["swing", "stop"];
+  const stopAndSwing: VerticalPosition[] = ["swing", "stop"];
   if (!present(fields, "s_fdir_ud")) {
-    return stopOrSwing;
+    return stopAndSwing;
   }
   const mask = Number.parseInt(fields.s_fdir_ud ?? "", 16);
   if (!Number.isFinite(mask)) {
-    return stopOrSwing;
+    return stopAndSwing;
   }
   const positions: VerticalPosition[] = [];
   if (mask & 0x01) {
@@ -229,7 +229,7 @@ function verticalPositions(fields: Record<string, string>): VerticalPosition[] {
   if (mask & 0x80) {
     const steps = Number.parseInt(fields.s_fdir_ud_step ?? "", 10);
     if (!(steps >= 0 && steps <= 5)) {
-      return stopOrSwing;
+      return stopAndSwing;
     }
     if (steps === 5) {
       positions.push(...FIXED_LOUVER_POSITIONS);

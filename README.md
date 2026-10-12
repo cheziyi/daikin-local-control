@@ -156,14 +156,14 @@ is not your Wi-Fi or Out-of-Home password. Pass it as `localPassword` to
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
 
 `getCapabilities()` resolves with a `DaikinCapabilities`, which lists the
-values this unit takes under the name of the state field each one limits:
+values this unit takes under the plural of the state field each one limits:
 
 | Field | Holds |
 | --- | --- |
 | `modes` | The modes the unit offers |
 | `fanSpeeds`, `swingModes`, `verticalPositions`, `horizontalPositions` | The values the unit takes, empty when it has no such control |
-| `targetTemperatureInC` | For each mode, `{ min, max, step }` in °C, or `null` where the mode has no setpoint |
-| `targetHumidity` | For each mode, the humidity settings it takes, empty where it takes none |
+| `targetTemperaturesInC` | For each mode, `{ min, max, step }` in °C, or `null` where the mode has no setpoint |
+| `targetHumidities` | For each mode, the humidity settings it takes, empty where it takes none |
 | `specialOutlet`, `energyMonitoring`, `demandControl`, `scheduleTimer` | `true` when the unit has the feature |
 | `model` | The adapter's own code for the unit's model |
 

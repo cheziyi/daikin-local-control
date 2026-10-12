@@ -66,9 +66,9 @@ describe("parseClassicCapabilities", () => {
     });
   });
 
-  describe("targetTemperatureInC", () => {
+  describe("targetTemperaturesInC", () => {
     it("reads setpoint limits as whole °C", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities({
+      const { targetTemperaturesInC } = parseClassicCapabilities({
         ...BASE,
         cmlmt_l: "18",
         cmlmt_h: "32",
@@ -76,19 +76,19 @@ describe("parseClassicCapabilities", () => {
         hmlmt_h: "30",
       });
 
-      expect(targetTemperatureInC.cool).toEqual({ min: 18, max: 32, step: 1 });
-      expect(targetTemperatureInC.heat).toEqual({ min: 10, max: 30, step: 1 });
+      expect(targetTemperaturesInC.cool).toEqual({ min: 18, max: 32, step: 1 });
+      expect(targetTemperaturesInC.heat).toEqual({ min: 10, max: 30, step: 1 });
     });
 
     it("offers 18 to 32 °C in cool and 10 to 30 °C in heat when the unit reports no limits", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities(BASE);
+      const { targetTemperaturesInC } = parseClassicCapabilities(BASE);
 
-      expect(targetTemperatureInC.cool).toEqual({ min: 18, max: 32, step: 1 });
-      expect(targetTemperatureInC.heat).toEqual({ min: 10, max: 30, step: 1 });
+      expect(targetTemperaturesInC.cool).toEqual({ min: 18, max: 32, step: 1 });
+      expect(targetTemperaturesInC.heat).toEqual({ min: 10, max: 30, step: 1 });
     });
 
     it("offers 18 to 30 °C in auto, whatever limits the unit reports", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities({
+      const { targetTemperaturesInC } = parseClassicCapabilities({
         ...BASE,
         cmlmt_l: "20",
         cmlmt_h: "28",
@@ -96,11 +96,11 @@ describe("parseClassicCapabilities", () => {
         hmlmt_h: "26",
       });
 
-      expect(targetTemperatureInC.auto).toEqual({ min: 18, max: 30, step: 1 });
+      expect(targetTemperaturesInC.auto).toEqual({ min: 18, max: 30, step: 1 });
     });
 
     it("takes the auto range of a subtype=qa unit from hmlmt_l and cmlmt_h", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities({
+      const { targetTemperaturesInC } = parseClassicCapabilities({
         ...BASE,
         subtype: "qa",
         cmlmt_l: "20",
@@ -109,25 +109,25 @@ describe("parseClassicCapabilities", () => {
         hmlmt_h: "26",
       });
 
-      expect(targetTemperatureInC.auto).toEqual({ min: 12, max: 28, step: 1 });
+      expect(targetTemperaturesInC.auto).toEqual({ min: 12, max: 28, step: 1 });
     });
 
     it("gives a setpoint range only to cool, heat and auto", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities(BASE);
+      const { targetTemperaturesInC } = parseClassicCapabilities(BASE);
 
-      expect(targetTemperatureInC.fan).toBeNull();
-      expect(targetTemperatureInC.dehumidify).toBeNull();
+      expect(targetTemperaturesInC.fan).toBeNull();
+      expect(targetTemperaturesInC.dehumidify).toBeNull();
     });
 
     it("gives no range to a mode the unit does not offer", () => {
-      const { targetTemperatureInC } = parseClassicCapabilities({
+      const { targetTemperaturesInC } = parseClassicCapabilities({
         ...BASE,
         model_type: "C",
       });
 
-      expect(targetTemperatureInC.heat).toBeNull();
-      expect(targetTemperatureInC.auto).toBeNull();
-      expect(targetTemperatureInC.cool).toEqual({ min: 18, max: 32, step: 1 });
+      expect(targetTemperaturesInC.heat).toBeNull();
+      expect(targetTemperaturesInC.auto).toBeNull();
+      expect(targetTemperaturesInC.cool).toEqual({ min: 18, max: 32, step: 1 });
     });
   });
 
@@ -357,7 +357,7 @@ describe("parseClassicCapabilities", () => {
     });
   });
 
-  describe("targetHumidity", () => {
+  describe("targetHumidities", () => {
     const NONE = { auto: [], dehumidify: [], cool: [], heat: [], fan: [] };
     const SETTINGS = ["autoLow", "auto", "autoHigh", "continuous"];
     // Auto, cool, heat and dehumidify: bits 1, 2, 4 and 16.
@@ -366,7 +366,7 @@ describe("parseClassicCapabilities", () => {
     it("reads s_humd as a decimal mask of the modes that take a setting", () => {
       expect(
         parseClassicCapabilities({ ...BASE, s_humd: EVERY_MODE })
-          .targetHumidity,
+          .targetHumidities,
       ).toEqual({
         auto: ["off", ...SETTINGS],
         dehumidify: SETTINGS,
@@ -375,21 +375,21 @@ describe("parseClassicCapabilities", () => {
         fan: [],
       });
       expect(
-        parseClassicCapabilities({ ...BASE, s_humd: "2" }).targetHumidity,
+        parseClassicCapabilities({ ...BASE, s_humd: "2" }).targetHumidities,
       ).toEqual({ ...NONE, cool: ["off", ...SETTINGS] });
     });
 
     it("is offered in no mode without a bit in s_humd", () => {
       expect(
-        parseClassicCapabilities({ ...BASE, s_humd: "0" }).targetHumidity,
+        parseClassicCapabilities({ ...BASE, s_humd: "0" }).targetHumidities,
       ).toEqual(NONE);
-      expect(parseClassicCapabilities(BASE).targetHumidity).toEqual(NONE);
+      expect(parseClassicCapabilities(BASE).targetHumidities).toEqual(NONE);
     });
 
     it("is offered only from cpv 2", () => {
       expect(
         parseClassicCapabilities({ ...BASE, cpv: "1", s_humd: EVERY_MODE })
-          .targetHumidity,
+          .targetHumidities,
       ).toEqual(NONE);
     });
 
@@ -399,7 +399,7 @@ describe("parseClassicCapabilities", () => {
           ...BASE,
           subtype: "qa",
           s_humd: EVERY_MODE,
-        }).targetHumidity,
+        }).targetHumidities,
       ).toEqual(NONE);
     });
 
@@ -409,7 +409,7 @@ describe("parseClassicCapabilities", () => {
           ...BASE,
           model_type: "C",
           s_humd: EVERY_MODE,
-        }).targetHumidity,
+        }).targetHumidities,
       ).toEqual({ ...NONE, dehumidify: SETTINGS, cool: ["off", ...SETTINGS] });
     });
   });
