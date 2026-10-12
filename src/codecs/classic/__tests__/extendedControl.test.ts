@@ -220,9 +220,10 @@ describe("parseClassicHolidayMode", () => {
 });
 
 describe("parseClassicOutOfHomeAccess", () => {
-  it("reads the polling method as on and any other as off", () => {
+  it("reads the polling method as on, any other as off, and a reply without one as null", () => {
     expect(parseClassicOutOfHomeAccess({ method: "polling" })).toBe(true);
     expect(parseClassicOutOfHomeAccess({ method: "home only" })).toBe(false);
+    expect(parseClassicOutOfHomeAccess({})).toBeNull();
   });
 });
 

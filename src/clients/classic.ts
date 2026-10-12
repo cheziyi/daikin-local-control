@@ -184,10 +184,10 @@ export class ClassicDaikinClient implements DaikinClient {
   }
 
   /** Whether the unit can be operated from outside the home network
-   * (`get_remote_method`). */
-  async getOutOfHomeAccess(): Promise<boolean> {
+   * (`basic_info`): `null` when the adapter does not report it. */
+  async getOutOfHomeAccess(): Promise<boolean | null> {
     return parseClassicOutOfHomeAccess(
-      await this.command(CLASSIC_ROUTES.getRemoteMethod),
+      await this.command(CLASSIC_ROUTES.basicInfo),
     );
   }
 

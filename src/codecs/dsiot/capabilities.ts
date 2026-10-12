@@ -55,7 +55,8 @@ type LouverAxis = "vertical" | "horizontal";
 
 /** Turns the flattened `adp_i` tree and the indoor and outdoor `dgc_status`
  * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
- * degrees. Without the outdoor tree, `specialModes` lists no `powerful`. */
+ * degrees. Without the outdoor tree, `specialModes` lists no `powerful`.
+ * Econo is listed in no fan mode: see UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {
@@ -72,6 +73,17 @@ export function parseDsiotCapabilities(
       ? [...HUMIDITY_SETTINGS]
       : [];
   };
+  const takenSpecialModes = SPECIAL_MODES.filter(
+    (specialMode) =>
+      values[`${DSIOT_SPECIAL_MODE_PATHS[specialMode]}.pt`] ===
+      SPECIAL_MODE_OFFERED_TYPE,
+  );
+  const specialModes = (mode: OperatingMode) =>
+    modes.includes(mode)
+      ? takenSpecialModes.filter(
+          (specialMode) => mode !== "fan" || specialMode !== "econo",
+        )
+      : [];
   const vertical = hasLouver(values, "vertical");
   const horizontal = hasLouver(values, "horizontal");
   const energyMonitoring =
@@ -111,11 +123,13 @@ export function parseDsiotCapabilities(
       heat: humiditySettings("heat"),
       fan: [],
     },
-    specialModes: SPECIAL_MODES.filter(
-      (mode) =>
-        values[`${DSIOT_SPECIAL_MODE_PATHS[mode]}.pt`] ===
-        SPECIAL_MODE_OFFERED_TYPE,
-    ),
+    specialModes: {
+      auto: specialModes("auto"),
+      dehumidify: specialModes("dehumidify"),
+      cool: specialModes("cool"),
+      heat: specialModes("heat"),
+      fan: specialModes("fan"),
+    },
     // Which leaf reports the special air outlet is not known: see
     // UNSUPPORTED.md.
     specialOutlet: false,

@@ -84,11 +84,14 @@ export function encodeClassicSpecialMode(
     : { set_spmode: flag(enabled), spmode_kind: SPECIAL_MODE_KIND_CODES[mode] };
 }
 
-/** Reads a `get_remote_method` reply. */
+/** Reads out-of-home access from a `basic_info` reply: `null` when it carries
+ * no `method`. */
 export function parseClassicOutOfHomeAccess(
   fields: Record<string, string>,
-): boolean {
-  return fields.method === REMOTE_METHOD_POLLING;
+): boolean | null {
+  return fields.method === undefined
+    ? null
+    : fields.method === REMOTE_METHOD_POLLING;
 }
 
 /** Turns `current`, the `get_remote_method` reply, and `enabled` into the

@@ -372,7 +372,7 @@ describe("DsiotDaikinClient", () => {
           ]),
         },
       ]);
-      expect(capabilities.specialModes).toEqual(["powerful"]);
+      expect(capabilities.specialModes.cool).toEqual(["powerful"]);
       expect(capabilities.targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 28,

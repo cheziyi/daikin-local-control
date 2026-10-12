@@ -140,3 +140,11 @@ Rejected: a `getSpecialModes` on `ClassicDaikinClient`, beside `setSpecialMode`.
   caller had.
 - A DSIOT adapter reports them in its `dgc_status` trees, and a method on
   `ClassicDaikinClient` gave a caller no way to read those.
+
+`DaikinCapabilities.specialModes` lists the special modes a unit takes mode by
+mode, as `targetHumidities` does.
+
+Rejected: one list for the whole unit.
+
+- Econo is not known to be taken in fan mode, so the one list offered it in a
+  mode where UNSUPPORTED.md lists it as unknown.

@@ -42,8 +42,9 @@ export interface DaikinCapabilities {
   /** Humidity settings per mode; empty where the mode has none or the unit does
    * not offer it. A percentage is listed for no unit: see UNSUPPORTED.md. */
   targetHumidities: Readonly<Record<OperatingMode, readonly TargetHumidity[]>>;
-  /** Special modes the unit takes; empty when it reports none. */
-  specialModes: readonly SpecialMode[];
+  /** Special modes per mode; empty where the unit takes none or does not offer
+   * the mode. Econo is listed in no fan mode: see UNSUPPORTED.md. */
+  specialModes: Readonly<Record<OperatingMode, readonly SpecialMode[]>>;
   /** Whether the unit has the special air outlet, which heat can swing
    * through. That swing is not modelled: see UNSUPPORTED.md. */
   specialOutlet: boolean;

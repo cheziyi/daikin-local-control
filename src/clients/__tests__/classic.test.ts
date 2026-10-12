@@ -486,8 +486,8 @@ describe("ClassicDaikinClient", () => {
       [
         "getOutOfHomeAccess",
         (client) => client.getOutOfHomeAccess(),
-        "/common/get_remote_method",
-        "ret=OK,method=polling,notice_ip_int=3600,notice_sync_int=60",
+        BASIC_INFO,
+        "ret=OK,type=aircon,method=polling",
         true,
       ],
       [

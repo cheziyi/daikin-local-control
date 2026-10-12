@@ -59,7 +59,13 @@ describe("parseDsiotCapabilities", () => {
         heat: [],
         fan: [],
       },
-      specialModes: [],
+      specialModes: {
+        auto: [],
+        dehumidify: [],
+        cool: [],
+        heat: [],
+        fan: [],
+      },
       specialOutlet: false,
       energyMonitoring: false,
       demandControl: false,
@@ -75,7 +81,7 @@ describe("parseDsiotCapabilities", () => {
           "dgc_status.e_1003.e_3002.p_44.pt": "2",
           "dgc_status.e_1002.e_3003.p_24.pt": "3",
           "dgc_status.e_1002.e_3003.p_20.pt": "2",
-        }).specialModes,
+        }).specialModes.cool,
       ).toEqual(["powerful", "streamer"]);
     });
 
@@ -84,7 +90,33 @@ describe("parseDsiotCapabilities", () => {
         parseDsiotCapabilities({
           ...UNIT,
           "dgc_status.e_1002.e_3003.p_24": "00",
+        }).specialModes.cool,
+      ).toEqual([]);
+    });
+
+    it("lists econo in every mode but fan", () => {
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          "dgc_status.e_1003.e_3002.p_44.pt": "2",
+          "dgc_status.e_1002.e_3003.p_24.pt": "2",
         }).specialModes,
+      ).toEqual({
+        auto: ["powerful", "econo"],
+        dehumidify: ["powerful", "econo"],
+        cool: ["powerful", "econo"],
+        heat: ["powerful", "econo"],
+        fan: ["powerful"],
+      });
+    });
+
+    it("lists none in a mode the unit does not offer", () => {
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          [DSIOT_PATHS.modelType]: "01",
+          "dgc_status.e_1003.e_3002.p_44.pt": "2",
+        }).specialModes.heat,
       ).toEqual([]);
     });
   });

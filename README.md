@@ -176,7 +176,7 @@ values this unit takes under the plural of the state field each one limits:
 | `fanSpeeds`, `swingModes`, `verticalPositions`, `horizontalPositions` | The values the unit takes, empty when it has no such control |
 | `targetTemperaturesInC` | For each mode, `{ min, max, step }` in °C, or `null` where the mode has no setpoint |
 | `targetHumidities` | For each mode, the humidity settings it takes, empty where it takes none |
-| `specialModes` | The special modes the unit takes, empty when it reports none |
+| `specialModes` | For each mode, the special modes the unit takes, empty where it takes none |
 | `specialOutlet`, `energyMonitoring`, `demandControl`, `scheduleTimer` | `true` when the unit has the feature |
 | `model` | The adapter's own code for the unit's model |
 
@@ -256,8 +256,7 @@ Read a setting back with the matching `get` method:
 
 | Method | Resolves with |
 | --- | --- |
-| `getLed()`, `getHolidayMode()` | `true` or `false`, or `null` when the adapter does not report it |
-| `getOutOfHomeAccess()` | `true` or `false` |
+| `getLed()`, `getHolidayMode()`, `getOutOfHomeAccess()` | `true` or `false`, or `null` when the adapter does not report it |
 | `getEnergyPrice()`, `getEnergyTarget()` | A number, or `null` when the adapter does not report it |
 | `getMetadata()` | `{ name, icon, group }`, without the fields the adapter does not report |
 
