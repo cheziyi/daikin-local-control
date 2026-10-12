@@ -9,6 +9,8 @@ import {
   HUMIDITY_SETTINGS,
   OPERATING_MODES,
   type OperatingMode,
+  SPECIAL_MODES,
+  type SpecialMode,
   SWING_MODES,
   type SwingMode,
   type TargetHumidity,
@@ -16,6 +18,14 @@ import {
 } from "../../models/state.js";
 
 const CAPABILITY_VERSIONS = ["0", "1", "2", "3"];
+// `en_spmode` sets one bit for each special mode the unit takes. Bit 8 is a
+// mode outside `SpecialMode`. The powerful and econo bits count only at
+// `cpv=3` with a `cpv_minor` other than `00`: see UNSUPPORTED.md.
+const SPECIAL_MODE_BITS: Record<SpecialMode, number> = {
+  powerful: 1,
+  econo: 2,
+  streamer: 4,
+};
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "cool",
   "dehumidify",
@@ -100,11 +110,40 @@ export function parseClassicCapabilities(
       fan: null,
     },
     targetHumidities: targetHumidities(fields, modern, offeredModes),
+    specialModes: specialModes(fields, cpv, offeredModes),
     specialOutlet: cpv === "3" && fields.airoutlet_pv === "0",
     energyMonitoring: fields.elec === "1",
     demandControl: fields.adp_kind === "4" && fields.dmnd === "1",
     scheduleTimer: ["1", "2"].includes(fields.en_scdltmr ?? ""),
     model: fields.model,
+  };
+}
+
+// Lists none for a unit that reports no `en_spmode`, and econo in every mode
+// but fan: see UNSUPPORTED.md.
+function specialModes(
+  fields: Record<string, string>,
+  cpv: string,
+  offeredModes: OperatingMode[],
+): Record<OperatingMode, SpecialMode[]> {
+  const bits = Number.parseInt(fields.en_spmode ?? "", 10);
+  const followsPowerfulAndEcono =
+    cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
+  const taken = SPECIAL_MODES.filter(
+    (specialMode) =>
+      (bits & SPECIAL_MODE_BITS[specialMode]) !== 0 &&
+      (specialMode === "streamer" || followsPowerfulAndEcono),
+  );
+  const inMode = (mode: OperatingMode) =>
+    offeredModes.includes(mode)
+      ? taken.filter((specialMode) => mode !== "fan" || specialMode !== "econo")
+      : [];
+  return {
+    auto: inMode("auto"),
+    dehumidify: inMode("dehumidify"),
+    cool: inMode("cool"),
+    heat: inMode("heat"),
+    fan: inMode("fan"),
   };
 }
 

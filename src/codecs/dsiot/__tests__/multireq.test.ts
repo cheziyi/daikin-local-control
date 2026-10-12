@@ -9,11 +9,11 @@ import {
 } from "../multireq.js";
 
 describe("DSIOT_TARGETS", () => {
-  it("addresses whole trees: values for adp_i, values and metadata for each dgc_status", () => {
+  it("addresses whole trees: values for adp_i, and values, types and metadata for each dgc_status", () => {
     expect(DSIOT_TARGETS).toEqual({
       adapterInfo: "/dsiot/edge.adp_i?filter=pv",
-      indoorStatus: "/dsiot/edge/adr_0100.dgc_status?filter=pv,md",
-      outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,md",
+      indoorStatus: "/dsiot/edge/adr_0100.dgc_status?filter=pv,pt,md",
+      outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md",
     });
   });
 });
@@ -27,8 +27,8 @@ describe("buildDsiotMultireqGet", () => {
       ]),
     ).toEqual({
       requests: [
-        { op: 2, to: "/dsiot/edge/adr_0100.dgc_status?filter=pv,md" },
-        { op: 2, to: "/dsiot/edge/adr_0200.dgc_status?filter=pv,md" },
+        { op: 2, to: "/dsiot/edge/adr_0100.dgc_status?filter=pv,pt,md" },
+        { op: 2, to: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md" },
       ],
     });
   });
@@ -171,6 +171,21 @@ describe("parseDsiotMultireqReply", () => {
       "dgc_status.e_1002.e_3001.p_02.md.mx": "4000",
       "dgc_status.e_1002.e_3001.p_02.md.st": "01",
     });
+  });
+
+  it("flattens the type of a leaf, and of no node with children", () => {
+    expect(
+      parseDsiotMultireqReply(
+        body({
+          rsc: 2000,
+          pc: {
+            pn: "dgc_status",
+            pt: 1,
+            pch: [{ pn: "p_24", pt: 2, pv: "00" }],
+          },
+        }),
+      ),
+    ).toEqual({ "dgc_status.p_24": "00", "dgc_status.p_24.pt": "2" });
   });
 
   it("merges the trees of every response", () => {

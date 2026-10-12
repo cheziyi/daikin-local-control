@@ -12,6 +12,10 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
+  parseClassicHolidayMode,
+  parseClassicLed,
+  parseClassicMetadata,
+  parseClassicOutOfHomeAccess,
 } from "../extendedControl.js";
 
 describe("encodeClassicLed", () => {
@@ -194,5 +198,57 @@ describe("encodeClassicTerminalScope", () => {
     ["all", "2"],
   ] as const)("writes %s as type=%s", (scope, type) => {
     expect(encodeClassicTerminalScope(scope)).toEqual({ type });
+  });
+});
+
+describe("parseClassicLed", () => {
+  it("reads led as on or off, and a reply without it as null", () => {
+    expect(parseClassicLed({ led: "1" })).toBe(true);
+    expect(parseClassicLed({ led: "0" })).toBe(false);
+    expect(parseClassicLed({})).toBeNull();
+  });
+});
+
+describe("parseClassicHolidayMode", () => {
+  it("reads en_hol as on or off, and a reply without it as null", () => {
+    expect(parseClassicHolidayMode({ en_hol: "1" })).toBe(true);
+    expect(parseClassicHolidayMode({ en_hol: "0" })).toBe(false);
+    expect(parseClassicHolidayMode({})).toBeNull();
+  });
+});
+
+describe("parseClassicOutOfHomeAccess", () => {
+  it("reads the polling method as on, any other as off, and a reply without one as null", () => {
+    expect(parseClassicOutOfHomeAccess({ method: "polling" })).toBe(true);
+    expect(parseClassicOutOfHomeAccess({ method: "home only" })).toBe(false);
+    expect(parseClassicOutOfHomeAccess({})).toBeNull();
+  });
+});
+
+describe("parseClassicMetadata", () => {
+  it("reads the name, icon and group, decoding the two names", () => {
+    expect(
+      parseClassicMetadata({
+        name: "Living%20Room",
+        icon: "5",
+        grp_name: "Up+stairs",
+        en_grp: "0",
+      }),
+    ).toEqual({
+      name: "Living Room",
+      icon: "5",
+      group: { name: "Up stairs", enabled: false },
+    });
+  });
+
+  it("leaves out each field the reply does not carry", () => {
+    expect(parseClassicMetadata({})).toEqual({});
+  });
+
+  it("reads a group without a name as an empty name", () => {
+    expect(parseClassicMetadata({ en_grp: "0" }).group).toEqual({
+      name: "",
+      enabled: false,
+    });
   });
 });

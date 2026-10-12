@@ -22,17 +22,14 @@ export interface DemandControl {
   mode: DemandMode;
 }
 
-export const SPECIAL_MODES = ["powerful", "econo", "streamer"] as const;
-
-export type SpecialMode = (typeof SPECIAL_MODES)[number];
-
 export interface DeviceGroup {
   name: string;
   /** Whether the unit is in the group. */
   enabled: boolean;
 }
 
-/** A field left out is not written. */
+/** `setMetadata` writes no field that is left out, and `getMetadata` leaves
+ * out a field the adapter does not report. */
 export interface DeviceMetadata {
   name?: string;
   /** The adapter's own code for the icon: see UNSUPPORTED.md. */

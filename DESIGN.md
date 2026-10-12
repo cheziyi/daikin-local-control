@@ -23,6 +23,36 @@ one that landed changes nothing. `reboot()` passes `{ retry: false }`, as should
 any caller of `command()`, `multireqGet()` or `multireqUpdate()` whose request
 is not safe to repeat.
 
+## The read before a write
+
+`setState` takes only the fields to change, but a write carries more than
+those. So `setState` first reads what the unit holds, and builds the write from
+that reply:
+
+| Adapter | A write carries | The reply supplies |
+| --- | --- | --- |
+| Classic | Every control field the unit takes, on each `set_control_info`: `pow`, `mode`, `stemp`, `shum`, `f_rate` and the direction fields. Whether the adapter takes a request without one of them is not known, so none is left out. | Each field the control leaves out. On a mode change, the values the adapter remembers for the target mode: `dt3`, `dh3`, `dfr3` and `dfd3` for cool. |
+| DSIOT | The power, the power transition and the mode on each write, then only the leaves the control changes | The power the unit holds, which decides the transition. The mode, when the control sets none. The `md` of the louver and humidity leaves, which a position and a percentage are encoded from. |
+
+With `maxStateAgeForSetStateInMs` set, `setState` skips that read while the
+client's `SetStateCache` holds a reply to `getState` or `getStateAndSensors`
+younger than that. A caller that polls sets it to its poll interval, and a
+write then costs one request where it cost two. No read is answered from the
+cache: `getState` asks the unit every time.
+
+The default is 0, because a write built from an old reply undoes a change made
+on the remote control since that reply. Someone switches the unit to heat on
+the remote, the caller sets 23 °C from a reply read before that, and the write
+puts the unit back in cool.
+
+Every write through the client clears the cache, `command()` with parameters
+and `multireqUpdate()` included, so the `setState` after a write reads first.
+
+Rejected: `setState` taking a whole `DaikinState` from the caller in place of
+the read. A `DaikinState` holds the current mode's values alone: it has neither
+the values a classic adapter remembers for the other modes nor the `md` of a
+DSIOT leaf, so the client would still need the reply.
+
 ## Capabilities
 
 `DaikinCapabilities` lists what a unit accepts in the vocabulary of `DaikinState`:
@@ -96,3 +126,25 @@ Rejected: positions as the numbers 0 to 25, typed `number`, with
 - A caller learned of a mistyped number only when the call ran.
 - The `Error` was the one failure of `setState` that was not a
   `DaikinError`.
+
+## Special modes
+
+`DaikinState.specialModes` lists the special modes that are on, and `getState`
+reads it on both protocols. `DaikinControl` leaves it out, so `setState` is
+never handed a field it cannot write: UNSUPPORTED.md says what is not known.
+
+Rejected: a `getSpecialModes` on `ClassicDaikinClient`, beside `setSpecialMode`.
+
+- A classic adapter reports the modes in `adv`, in the `get_control_info` reply
+  `getState` already reads, so the method sent a second request for a reply the
+  caller had.
+- A DSIOT adapter reports them in its `dgc_status` trees, and a method on
+  `ClassicDaikinClient` gave a caller no way to read those.
+
+`DaikinCapabilities.specialModes` lists the special modes a unit takes mode by
+mode, as `targetHumidities` does.
+
+Rejected: one list for the whole unit.
+
+- Econo is not known to be taken in fan mode, so the one list offered it in a
+  mode where UNSUPPORTED.md lists it as unknown.

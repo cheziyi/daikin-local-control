@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DaikinConnectionError, DaikinError } from "../../error.js";
 import { ClassicDaikinClient } from "../classic.js";
 import { failingFirst, MockDaikinTransport } from "./mocks/transport.js";
@@ -7,6 +7,8 @@ const BASIC_INFO = "/common/basic_info";
 const GET_MODEL_INFO = "/aircon/get_model_info";
 const GET_CONTROL_INFO = "/aircon/get_control_info";
 const SET_CONTROL_INFO = "/aircon/set_control_info";
+const GET_SENSOR_INFO = "/aircon/get_sensor_info";
+const SET_SPECIAL_MODE = "/aircon/set_special_mode";
 
 // A unit that takes `f_dir` alone, running in cool at 24 °C.
 const UNIT = {
@@ -58,6 +60,7 @@ describe("ClassicDaikinClient", () => {
         swingMode: "vertical",
         verticalPosition: null,
         horizontalPosition: null,
+        specialModes: [],
       });
       expect(transport.sent).toStrictEqual([
         { method: "GET", path: GET_CONTROL_INFO },
@@ -176,6 +179,129 @@ describe("ClassicDaikinClient", () => {
         SET_CONTROL_INFO,
       ]);
     });
+
+    it("reads get_control_info again after getState, without a maxStateAgeForSetStateInMs", async () => {
+      const transport = adapter(UNIT);
+      const client = classicClient(transport);
+
+      await client.getState();
+      await client.setState({ power: false });
+
+      expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(2);
+    });
+
+    describe("with a maxStateAgeForSetStateInMs", () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      function reusingClient(
+        transport: MockDaikinTransport,
+      ): ClassicDaikinClient {
+        vi.useFakeTimers();
+        return new ClassicDaikinClient(
+          transport.asTransport(),
+          undefined,
+          60_000,
+        );
+      }
+
+      it("writes the control over the reply getState read, without reading again", async () => {
+        const transport = adapter(UNIT);
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(59_999);
+        await client.setState({ targetTemperatureInC: 23 });
+
+        expect(pathsSentTo(transport)).toEqual([
+          GET_CONTROL_INFO,
+          BASIC_INFO,
+          GET_MODEL_INFO,
+          SET_CONTROL_INFO,
+        ]);
+        expect(queriesSentTo(transport, SET_CONTROL_INFO)).toMatchObject([
+          { pow: "1", mode: "3", stemp: "23.0", f_rate: "A", f_dir: "1" },
+        ]);
+      });
+
+      it("writes over the reply getStateAndSensors read", async () => {
+        const transport = adapter({ ...UNIT, [GET_SENSOR_INFO]: "ret=OK" });
+        const client = reusingClient(transport);
+
+        await client.getStateAndSensors();
+        await client.setState({ power: false });
+
+        expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(1);
+      });
+
+      it("reads get_control_info again once the reply is that old", async () => {
+        const transport = adapter(UNIT);
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(60_000);
+        await client.setState({ power: false });
+
+        expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(2);
+      });
+
+      it("reads get_control_info again for the write after a write", async () => {
+        const transport = adapter(UNIT);
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.setState({ mode: "heat" });
+        await client.setState({ targetTemperatureInC: 23 });
+
+        expect(pathsSentTo(transport)).toEqual([
+          GET_CONTROL_INFO,
+          BASIC_INFO,
+          GET_MODEL_INFO,
+          SET_CONTROL_INFO,
+          GET_CONTROL_INFO,
+          SET_CONTROL_INFO,
+        ]);
+      });
+
+      it("reads get_control_info again after a write the adapter refused", async () => {
+        const transport = adapter({
+          ...UNIT,
+          [SET_SPECIAL_MODE]: "ret=PARAM NG",
+        });
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await expect(
+          client.setSpecialMode("powerful", true),
+        ).rejects.toBeInstanceOf(DaikinError);
+        await client.setState({ power: false });
+
+        expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(2);
+      });
+
+      it("reads get_control_info again after a write to another endpoint", async () => {
+        const transport = adapter({ ...UNIT, [SET_SPECIAL_MODE]: "ret=OK" });
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.setSpecialMode("powerful", true);
+        await client.setState({ power: false });
+
+        expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(2);
+      });
+
+      it("keeps the reply across a read of another endpoint", async () => {
+        const transport = adapter({ ...UNIT, [GET_SENSOR_INFO]: "ret=OK" });
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.getSensors();
+        await client.setState({ power: false });
+
+        expect(queriesSentTo(transport, GET_CONTROL_INFO)).toHaveLength(1);
+      });
+    });
   });
 
   describe("getCapabilities", () => {
@@ -201,6 +327,20 @@ describe("ClassicDaikinClient", () => {
     });
   });
 
+  describe("getDeviceInfo", () => {
+    it("reads basic_info into a DaikinDeviceInfo", async () => {
+      const transport = adapter({
+        [BASIC_INFO]: "ret=OK,type=aircon,ver=1_2_51,mac=A408EACC91D4",
+      });
+
+      expect(await classicClient(transport).getDeviceInfo()).toEqual({
+        macAddress: "A4:08:EA:CC:91:D4",
+        firmwareVersion: "1.2.51",
+      });
+      expect(pathsSentTo(transport)).toEqual([BASIC_INFO]);
+    });
+  });
+
   describe("getSensors", () => {
     it("reads get_sensor_info into DaikinSensors", async () => {
       const transport = adapter({
@@ -212,6 +352,38 @@ describe("ClassicDaikinClient", () => {
         indoorHumidityInPercent: null,
         outdoorTemperatureInC: null,
       });
+    });
+  });
+
+  describe("getStateAndSensors", () => {
+    it("reads get_control_info, then get_sensor_info", async () => {
+      const transport = adapter({
+        ...UNIT,
+        [GET_SENSOR_INFO]: "ret=OK,htemp=25.5,hhum=50,otemp=31.0",
+      });
+
+      expect(await classicClient(transport).getStateAndSensors()).toEqual({
+        state: {
+          power: true,
+          mode: "cool",
+          targetTemperatureInC: 24,
+          targetHumidity: "off",
+          fanSpeed: "auto",
+          swingMode: "vertical",
+          verticalPosition: null,
+          horizontalPosition: null,
+          specialModes: [],
+        },
+        sensors: {
+          indoorTemperatureInC: 25.5,
+          outdoorTemperatureInC: 31,
+          indoorHumidityInPercent: 50,
+        },
+      });
+      expect(pathsSentTo(transport)).toEqual([
+        GET_CONTROL_INFO,
+        GET_SENSOR_INFO,
+      ]);
     });
   });
 
@@ -287,6 +459,67 @@ describe("ClassicDaikinClient", () => {
         expect(transport.sent).toEqual([{ method: "GET", path, query }]);
       },
     );
+
+    it.each<
+      [
+        string,
+        (client: ClassicDaikinClient) => Promise<unknown>,
+        string,
+        string,
+        unknown,
+      ]
+    >([
+      [
+        "getLed",
+        (client) => client.getLed(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,led=1",
+        true,
+      ],
+      [
+        "getHolidayMode",
+        (client) => client.getHolidayMode(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,en_hol=0",
+        false,
+      ],
+      [
+        "getOutOfHomeAccess",
+        (client) => client.getOutOfHomeAccess(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,method=polling",
+        true,
+      ],
+      [
+        "getMetadata",
+        (client) => client.getMetadata(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,name=Living%20Room,icon=5,grp_name=Upstairs,en_grp=1",
+        {
+          name: "Living Room",
+          icon: "5",
+          group: { name: "Upstairs", enabled: true },
+        },
+      ],
+    ])(
+      "%s sends one GET to its endpoint and reads the reply",
+      async (_method, call, path, body, expected) => {
+        const transport = adapter({ [path]: body });
+
+        expect(await call(classicClient(transport))).toEqual(expected);
+        expect(transport.sent).toEqual([{ method: "GET", path }]);
+      },
+    );
+
+    it("getLed reads basic_info again on each call", async () => {
+      const transport = adapter({ [BASIC_INFO]: "ret=OK,type=aircon,led=1" });
+      const client = classicClient(transport);
+
+      await client.getLed();
+      await client.getLed();
+
+      expect(pathsSentTo(transport)).toEqual([BASIC_INFO, BASIC_INFO]);
+    });
 
     it("unregisterTerminal unregisters this terminal's own uuid by default", async () => {
       const transport = adapter({ "/common/unregister_terminal": "ret=OK" });

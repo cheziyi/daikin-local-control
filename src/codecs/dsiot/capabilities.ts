@@ -11,6 +11,7 @@ import {
   HUMIDITY_SETTINGS,
   OPERATING_MODES,
   type OperatingMode,
+  SPECIAL_MODES,
   SWING_MODES,
   type SwingMode,
   VERTICAL_POSITIONS,
@@ -20,6 +21,7 @@ import {
   DSIOT_HORIZONTAL_POSITION_VALUES,
   DSIOT_MODE_PATHS,
   DSIOT_PATHS,
+  DSIOT_SPECIAL_MODE_PATHS,
   DSIOT_VERTICAL_POSITION_VALUES,
   type DsiotSetpoint,
   decodeDsiotLittleEndian,
@@ -35,6 +37,9 @@ const ADAPTER_PATHS = {
   scheduleTimer: "adp_i.func.en_scdltmr",
 } as const;
 
+// The `pt` of a special mode's leaf on a unit that takes the mode.
+const SPECIAL_MODE_OFFERED_TYPE = "2";
+
 const COOLING_ONLY_MODEL_TYPE = "01";
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "dehumidify",
@@ -48,8 +53,10 @@ const FIXED_POSITIONS: readonly string[] = FIXED_LOUVER_POSITIONS;
 
 type LouverAxis = "vertical" | "horizontal";
 
-/** Turns the flattened `adp_i` and indoor `dgc_status` trees (with `md`) into
- * `DaikinCapabilities`. Setpoints count half degrees. */
+/** Turns the flattened `adp_i` tree and the indoor and outdoor `dgc_status`
+ * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
+ * degrees. Without the outdoor tree, `specialModes` lists no `powerful`. It
+ * lists econo in every mode but fan: see UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {
@@ -66,6 +73,17 @@ export function parseDsiotCapabilities(
       ? [...HUMIDITY_SETTINGS]
       : [];
   };
+  const takenSpecialModes = SPECIAL_MODES.filter(
+    (specialMode) =>
+      values[`${DSIOT_SPECIAL_MODE_PATHS[specialMode]}.pt`] ===
+      SPECIAL_MODE_OFFERED_TYPE,
+  );
+  const specialModes = (mode: OperatingMode) =>
+    modes.includes(mode)
+      ? takenSpecialModes.filter(
+          (specialMode) => mode !== "fan" || specialMode !== "econo",
+        )
+      : [];
   const vertical = hasLouver(values, "vertical");
   const horizontal = hasLouver(values, "horizontal");
   const energyMonitoring =
@@ -104,6 +122,13 @@ export function parseDsiotCapabilities(
       cool: humiditySettings("cool"),
       heat: humiditySettings("heat"),
       fan: [],
+    },
+    specialModes: {
+      auto: specialModes("auto"),
+      dehumidify: specialModes("dehumidify"),
+      cool: specialModes("cool"),
+      heat: specialModes("heat"),
+      fan: specialModes("fan"),
     },
     // Which leaf reports the special air outlet is not known: see
     // UNSUPPORTED.md.

@@ -9,6 +9,7 @@ export * from "./codecs/classic/state.js";
 export * from "./codecs/credentials.js";
 export * from "./codecs/device.js";
 export * from "./codecs/dsiot/capabilities.js";
+export * from "./codecs/dsiot/device.js";
 export * from "./codecs/dsiot/multireq.js";
 export * from "./codecs/dsiot/state.js";
 export * from "./discovery.js";

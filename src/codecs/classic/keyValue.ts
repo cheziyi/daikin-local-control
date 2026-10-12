@@ -17,6 +17,16 @@ export function parseClassicKeyValue(body: string): Record<string, string> {
   return result;
 }
 
+/** Decodes a form-encoded value, such as a name: `+` is a space. A value that
+ * is not valid percent-encoding is returned as the adapter sent it. */
+export function decodeClassicText(value: string): string {
+  try {
+    return decodeURIComponent(value.replaceAll("+", " "));
+  } catch {
+    return value;
+  }
+}
+
 export function isClassicOk(fields: Record<string, string>): boolean {
   return fields.ret === "OK";
 }

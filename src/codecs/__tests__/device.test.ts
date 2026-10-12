@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDevice } from "../device.js";
+import { parseDevice, parseDeviceInfo } from "../device.js";
 
 describe("parseDevice", () => {
   it("reads a classic adapter outside secure mode and without a child lock", () => {
@@ -92,5 +92,62 @@ describe("parseDevice", () => {
 
   it("leaves out the name when the reply has none", () => {
     expect(parseDevice("192.168.1.54", {}).name).toBeUndefined();
+  });
+
+  it("reads the MAC address in pairs joined by colons, keeping its letter case", () => {
+    expect(
+      parseDevice("192.168.1.54", { mac: "A408EACC91D4" }).macAddress,
+    ).toBe("A4:08:EA:CC:91:D4");
+    expect(
+      parseDevice("192.168.1.54", { mac: "a408eacc91d4" }).macAddress,
+    ).toBe("a4:08:ea:cc:91:d4");
+  });
+
+  it("reads the firmware version as its three numbers joined by dots", () => {
+    expect(parseDevice("192.168.1.54", { ver: "1_2_51" }).firmwareVersion).toBe(
+      "1.2.51",
+    );
+    expect(
+      parseDevice("192.168.1.54", { ver: "1_02_51" }).firmwareVersion,
+    ).toBe("1.2.51");
+  });
+
+  it("marks a pre-release firmware version, and drops any other fourth part", () => {
+    expect(
+      parseDevice("192.168.1.54", { ver: "3_3_6_pre" }).firmwareVersion,
+    ).toBe("3.3.6.pre");
+    expect(
+      parseDevice("192.168.1.54", { ver: "3_3_6_rc" }).firmwareVersion,
+    ).toBe("3.3.6");
+  });
+
+  it("leaves out a firmware version that is not three numbers", () => {
+    expect(
+      parseDevice("192.168.1.54", { ver: "1_2" }).firmwareVersion,
+    ).toBeUndefined();
+    expect(
+      parseDevice("192.168.1.54", { ver: "1_2_x" }).firmwareVersion,
+    ).toBeUndefined();
+  });
+
+  it("leaves out the MAC address and firmware version when the reply has none", () => {
+    const device = parseDevice("192.168.1.54", { mac: "" });
+
+    expect(device.macAddress).toBeUndefined();
+    expect(device.firmwareVersion).toBeUndefined();
+  });
+});
+
+describe("parseDeviceInfo", () => {
+  it("reads the MAC address and firmware version alone", () => {
+    expect(
+      parseDeviceInfo({
+        ret: "OK",
+        type: "aircon",
+        name: "Bedroom",
+        mac: "A408EACC91D4",
+        ver: "1_2_51",
+      }),
+    ).toEqual({ macAddress: "A4:08:EA:CC:91:D4", firmwareVersion: "1.2.51" });
   });
 });

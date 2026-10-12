@@ -8,6 +8,8 @@ import {
   type HorizontalPosition,
   type HumiditySetting,
   type OperatingMode,
+  SPECIAL_MODES,
+  type SpecialMode,
   type SwingMode,
   type TargetHumidity,
   VERTICAL_POSITIONS,
@@ -29,6 +31,15 @@ export const DSIOT_PATHS = {
   modelType: "dgc_status.e_1002.e_A001.p_07",
   energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
 } as const;
+
+/** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
+ * edge. */
+export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
+  powerful: "dgc_status.e_1003.e_3002.p_44",
+  econo: "dgc_status.e_1002.e_3003.p_24",
+  streamer: "dgc_status.e_1002.e_3003.p_20",
+};
+const SPECIAL_MODE_ON = "01";
 
 export interface DsiotSetpoint {
   path: string;
@@ -476,7 +487,8 @@ const POWER_TRANSITIONS = {
 /** Turns the flattened indoor `dgc_status` tree, read with `md`, into a
  * `DaikinState`. Every value is per mode: the setpoint, humidity, fan speed and
  * louvers each have a leaf for each mode, and the state reads the current
- * mode's. */
+ * mode's. Powerful is read from the outdoor tree, and reads as off without
+ * it. */
 export function parseDsiotState(values: Record<string, string>): DaikinState {
   const mode = decodeDsiotMode(values[DSIOT_PATHS.mode]) ?? "auto";
   const paths = DSIOT_MODE_PATHS[mode];
@@ -491,6 +503,9 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
     swingMode: decodeSwing(values[paths.vertical], values[paths.horizontal]),
     verticalPosition: parseVerticalPosition(values, paths.vertical),
     horizontalPosition: parseHorizontalPosition(values[paths.horizontal]),
+    specialModes: SPECIAL_MODES.filter(
+      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === SPECIAL_MODE_ON,
+    ),
   };
 }
 

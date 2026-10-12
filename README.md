@@ -74,7 +74,10 @@ await client.close();
 ### Discovery
 
 `discoverDevices()` resolves with one `DaikinDevice` for each adapter that
-answered, and with an empty array when none did.
+answered, and with an empty array when none did. Each carries the adapter's
+`macAddress`, such as `A4:08:EA:CC:91:D4`, and `firmwareVersion`, such as
+`1.2.51`, when the adapter reports them: key a stored device on `macAddress`,
+because `host` changes when the adapter is given a new address.
 
 | It | So |
 | --- | --- |
@@ -91,6 +94,9 @@ import { createDaikinClient, type DaikinDevice } from "daikin-local-control";
 const device: DaikinDevice = { host: "192.168.1.50", protocol: "classic" };
 const client = createDaikinClient(device, { terminalUuid: savedUuid });
 ```
+
+A device written by hand has no `macAddress` or `firmwareVersion`: read them
+from the adapter with `await client.getDeviceInfo()`.
 
 Set `protocol` to `dsiot` for a BRP084 and to `classic` for every other
 adapter. A device without flags is an adapter that requires neither
@@ -113,7 +119,7 @@ again.
 ```ts
 import { randomUUID } from "node:crypto";
 
-const savedUuid = loadFromConfiguration() ?? saveToConfiguration(randomUUID());
+const savedUuid = loadFromConfig() ?? saveToConfig(randomUUID());
 ```
 
 **KEY (when `device.requiresRegistration` is `true`).** These
@@ -159,6 +165,7 @@ is not your Wi-Fi or Out-of-Home password. Pass it as `localPassword` to
 | `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
 | `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto` or `floorWarming`, or `null` where the unit reports none |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
+| `specialModes` | Those of `powerful`, `econo` and `streamer` that are on, empty when none is |
 
 `getCapabilities()` resolves with a `DaikinCapabilities`, which lists the
 values this unit takes under the plural of the state field each one limits:
@@ -169,11 +176,16 @@ values this unit takes under the plural of the state field each one limits:
 | `fanSpeeds`, `swingModes`, `verticalPositions`, `horizontalPositions` | The values the unit takes, empty when it has no such control |
 | `targetTemperaturesInC` | For each mode, `{ min, max, step }` in °C, or `null` where the mode has no setpoint |
 | `targetHumidities` | For each mode, the humidity settings it takes, empty where it takes none |
+| `specialModes` | For each mode, the special modes the unit takes, empty where it takes none |
 | `specialOutlet`, `energyMonitoring`, `demandControl`, `scheduleTimer` | `true` when the unit has the feature |
 | `model` | The adapter's own code for the unit's model |
 
 `getSensors()` resolves with `indoorTemperatureInC`, `outdoorTemperatureInC`
 and `indoorHumidityInPercent`, each `null` when the unit does not report it.
+
+Call `getStateAndSensors()` when you want both: it resolves with
+`{ state, sensors }`, and a DSIOT adapter answers it in one request, where
+`getState()` then `getSensors()` sends the same request twice.
 
 ### Changing state
 
@@ -190,6 +202,24 @@ given, whether or not the unit lists it.
 | `targetHumidity` | In `fan` |
 | `fanSpeed` | In `dehumidify`, and on a DSIOT adapter in `cool` while a humidity setting is on: the fan runs on `auto` |
 | `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position |
+
+`setState()` takes no `specialModes`: turn one on or off with
+[`setSpecialMode()`](#extended-controls), which only a classic adapter has.
+
+Pass `maxStateAgeForSetStateInMs` to `createDaikinClient` when you poll the
+state anyway: `setState()` reads the unit before each write, and with it builds
+the write from a `getState()` or `getStateAndSensors()` reply younger than that
+instead. It changes no read: `getState()` asks the unit every time.
+
+```ts
+const client = createDaikinClient(device, {
+  terminalUuid: savedUuid,
+  maxStateAgeForSetStateInMs: 30_000, // your poll interval, in milliseconds
+});
+```
+
+The write undoes a change made on the remote control since that reply:
+[DESIGN.md](DESIGN.md#the-read-before-a-write) says how.
 
 ### Extended controls
 
@@ -221,6 +251,13 @@ if (client instanceof ClassicDaikinClient) {
   const basicInfo = await client.command("/common/basic_info");
 }
 ```
+
+Read a setting back with the matching `get` method:
+
+| Method | Resolves with |
+| --- | --- |
+| `getLed()`, `getHolidayMode()`, `getOutOfHomeAccess()` | `true` or `false`, or `null` when the adapter does not report it |
+| `getMetadata()` | `{ name, icon, group }`, without the fields the adapter does not report |
 
 [UNSUPPORTED.md](UNSUPPORTED.md) lists the endpoints without a typed method and
 what is not known about each.

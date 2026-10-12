@@ -414,6 +414,61 @@ describe("parseClassicCapabilities", () => {
     });
   });
 
+  describe("specialModes", () => {
+    const MINOR = { ...BASE, cpv_minor: "20" };
+    const NONE = { auto: [], dehumidify: [], cool: [], heat: [], fan: [] };
+
+    it.each([
+      ["1", ["powerful"]],
+      ["2", ["econo"]],
+      ["4", ["streamer"]],
+      ["7", ["powerful", "econo", "streamer"]],
+      ["8", []],
+      ["0", []],
+    ] as const)(
+      "reads en_spmode=%s as %j in cool",
+      (en_spmode, specialModes) => {
+        expect(
+          parseClassicCapabilities({ ...MINOR, en_spmode }).specialModes.cool,
+        ).toEqual(specialModes);
+      },
+    );
+
+    it("lists econo in every mode but fan", () => {
+      expect(
+        parseClassicCapabilities({ ...MINOR, en_spmode: "7" }).specialModes,
+      ).toEqual({
+        auto: ["powerful", "econo", "streamer"],
+        dehumidify: ["powerful", "econo", "streamer"],
+        cool: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer"],
+        fan: ["powerful", "streamer"],
+      });
+    });
+
+    it.each([
+      ["cpv_minor is 00", { ...BASE, cpv_minor: "00" }],
+      ["there is no cpv_minor", BASE],
+      ["cpv is 2", { ...MINOR, cpv: "2" }],
+    ])("lists streamer alone when %s", (_case, fields) => {
+      expect(
+        parseClassicCapabilities({ ...fields, en_spmode: "7" }).specialModes
+          .cool,
+      ).toEqual(["streamer"]);
+    });
+
+    it("lists none in a mode the unit does not offer", () => {
+      expect(
+        parseClassicCapabilities({ ...MINOR, model_type: "C", en_spmode: "7" })
+          .specialModes.heat,
+      ).toEqual([]);
+    });
+
+    it("lists none for a unit that reports no en_spmode", () => {
+      expect(parseClassicCapabilities(MINOR).specialModes).toEqual(NONE);
+    });
+  });
+
   describe("specialOutlet", () => {
     it("is set at cpv 3 when airoutlet_pv is 0", () => {
       expect(

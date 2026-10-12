@@ -1,8 +1,10 @@
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DaikinControl,
   DaikinSensors,
   DaikinState,
+  DaikinStateAndSensors,
 } from "../models/state.js";
 
 /** The controls every adapter offers, whatever its wire protocol or
@@ -11,6 +13,9 @@ import type {
  * `ClassicDaikinClient.registerTerminal`. Every method rejects with a
  * `DaikinError` when its request fails. */
 export interface DaikinClient {
+  /** The adapter's MAC address and firmware version. */
+  getDeviceInfo(): Promise<DaikinDeviceInfo>;
+
   /** The unit's supported features. */
   getCapabilities(): Promise<DaikinCapabilities>;
 
@@ -18,11 +23,18 @@ export interface DaikinClient {
   getState(): Promise<DaikinState>;
 
   /** Change part of the state. The client reads the current state, overlays the
-   * control, and writes the whole thing back. */
+   * control, and writes the whole thing back. It skips the read when it holds
+   * a reply to `getState` or `getStateAndSensors` younger than
+   * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   setState(control: DaikinControl): Promise<void>;
 
   /** Read-only temperature / humidity readings. */
   getSensors(): Promise<DaikinSensors>;
+
+  /** What `getState` and `getSensors` resolve with, together. A DSIOT adapter
+   * answers both in one request, where calling the two sends the same request
+   * twice. A classic adapter takes one request for each. */
+  getStateAndSensors(): Promise<DaikinStateAndSensors>;
 
   /** Close the connection to the adapter. */
   close(): Promise<void>;

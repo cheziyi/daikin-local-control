@@ -26,6 +26,13 @@ export interface CreateDaikinClientOptions {
    * waits of 0, 50, 100, 200 and 400 milliseconds: see
    * `DaikinRetryOptions.delaysInMs`. */
   retry?: DaikinRetryOptions;
+  /** How old, in milliseconds, a reply to `getState` or `getStateAndSensors`
+   * may be for `setState` to build its write from it instead of reading the
+   * unit first. Defaults to 0: `setState` always reads first. It changes no
+   * read: `getState` asks the unit every time. The write undoes a change made
+   * on the remote control since that reply: see
+   * DESIGN.md#the-read-before-a-write. */
+  maxStateAgeForSetStateInMs?: number;
   /** HTTPS adapters only. Without a CA the adapter's certificate isn't verified. */
   tls?: DaikinTlsOptions;
 }
@@ -49,8 +56,16 @@ export function createDaikinClient(
   });
 
   return device.protocol === "dsiot"
-    ? new DsiotDaikinClient(transport, options.retry)
-    : new ClassicDaikinClient(transport, options.retry);
+    ? new DsiotDaikinClient(
+        transport,
+        options.retry,
+        options.maxStateAgeForSetStateInMs,
+      )
+    : new ClassicDaikinClient(
+        transport,
+        options.retry,
+        options.maxStateAgeForSetStateInMs,
+      );
 }
 
 function localPasswordAuthentication(

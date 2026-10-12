@@ -1,4 +1,5 @@
 import { parseDsiotCapabilities } from "../codecs/dsiot/capabilities.js";
+import { parseDsiotDeviceInfo } from "../codecs/dsiot/device.js";
 import {
   buildDsiotMultireqGet,
   buildDsiotMultireqUpdate,
@@ -12,10 +13,12 @@ import {
   parseDsiotState,
 } from "../codecs/dsiot/state.js";
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DaikinControl,
   DaikinSensors,
   DaikinState,
+  DaikinStateAndSensors,
 } from "../models/state.js";
 import {
   type DaikinRequestOptions,
@@ -24,6 +27,7 @@ import {
   withRetry,
 } from "../transport.js";
 import type { DaikinClient } from "./client.js";
+import { SetStateCache } from "./setStateCache.js";
 
 // DSIOT endpoints (BRP084-style). Climate state is a POST (read) or PUT (write)
 // of a JSON property tree to `multireq`.
@@ -35,14 +39,27 @@ const DSIOT_ROUTES = {
 /** DSIOT adapter (BRP084-style). One endpoint, `/dsiot/multireq`: POST to read
  * whole `dgc_status` trees, PUT to write one merged tree. */
 export class DsiotDaikinClient implements DaikinClient {
-  /** `close` closes `transport`, so give each client a transport of its own. */
+  private readonly setStateCache: SetStateCache;
+
+  /** `close` closes `transport`, so give each client a transport of its own.
+   * `maxStateAgeForSetStateInMs` defaults to 0: see
+   * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   constructor(
     private readonly transport: DaikinTransport,
     private readonly retryOptions?: DaikinRetryOptions,
-  ) {}
+    maxStateAgeForSetStateInMs = 0,
+  ) {
+    this.setStateCache = new SetStateCache(maxStateAgeForSetStateInMs);
+  }
 
   close(): Promise<void> {
     return this.transport.close();
+  }
+
+  async getDeviceInfo(): Promise<DaikinDeviceInfo> {
+    return parseDsiotDeviceInfo(
+      await this.multireqGet([DSIOT_TARGETS.adapterInfo]),
+    );
   }
 
   async getCapabilities(): Promise<DaikinCapabilities> {
@@ -50,18 +67,19 @@ export class DsiotDaikinClient implements DaikinClient {
       await this.multireqGet([
         DSIOT_TARGETS.adapterInfo,
         DSIOT_TARGETS.indoorStatus,
+        DSIOT_TARGETS.outdoorStatus,
       ]),
     );
   }
 
   async getState(): Promise<DaikinState> {
-    return parseDsiotState(
-      await this.multireqGet([DSIOT_TARGETS.indoorStatus]),
-    );
+    return parseDsiotState(await this.readStatus());
   }
 
   async setState(control: DaikinControl): Promise<void> {
-    const values = await this.multireqGet([DSIOT_TARGETS.indoorStatus]);
+    const values =
+      this.setStateCache.get() ??
+      (await this.multireqGet([DSIOT_TARGETS.indoorStatus]));
     await this.multireqUpdate(applyDsiotControl(values, control));
   }
 
@@ -72,6 +90,14 @@ export class DsiotDaikinClient implements DaikinClient {
         DSIOT_TARGETS.outdoorStatus,
       ]),
     );
+  }
+
+  async getStateAndSensors(): Promise<DaikinStateAndSensors> {
+    const values = await this.readStatus();
+    return {
+      state: parseDsiotState(values),
+      sensors: parseDsiotSensors(values),
+    };
   }
 
   // --- extended controls ---------------------------------------------------
@@ -109,8 +135,25 @@ export class DsiotDaikinClient implements DaikinClient {
   ): Promise<Record<string, string>> {
     const send = () =>
       this.transport.send({ method, path: DSIOT_ROUTES.multireq, jsonBody });
-    return parseDsiotMultireqReply(
-      await (retry ? withRetry(send, this.retryOptions) : send()),
-    );
+    try {
+      return parseDsiotMultireqReply(
+        await (retry ? withRetry(send, this.retryOptions) : send()),
+      );
+    } finally {
+      // Even a write that failed: one that timed out may still have reached
+      // the unit.
+      if (method === "PUT") {
+        this.setStateCache.clear();
+      }
+    }
+  }
+
+  private async readStatus(): Promise<Record<string, string>> {
+    const values = await this.multireqGet([
+      DSIOT_TARGETS.indoorStatus,
+      DSIOT_TARGETS.outdoorStatus,
+    ]);
+    this.setStateCache.set(values);
+    return values;
   }
 }

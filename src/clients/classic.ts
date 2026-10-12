@@ -15,6 +15,10 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
+  parseClassicHolidayMode,
+  parseClassicLed,
+  parseClassicMetadata,
+  parseClassicOutOfHomeAccess,
 } from "../codecs/classic/extendedControl.js";
 import {
   assertClassicOk,
@@ -25,17 +29,20 @@ import {
   parseClassicSensors,
   parseClassicState,
 } from "../codecs/classic/state.js";
+import { parseDeviceInfo } from "../codecs/device.js";
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DemandControl,
   DeviceMetadata,
-  SpecialMode,
   TerminalScope,
 } from "../models/extendedControl.js";
 import type {
   DaikinControl,
   DaikinSensors,
   DaikinState,
+  DaikinStateAndSensors,
+  SpecialMode,
 } from "../models/state.js";
 import {
   type DaikinRequestOptions,
@@ -44,6 +51,7 @@ import {
   withRetry,
 } from "../transport.js";
 import type { DaikinClient } from "./client.js";
+import { SetStateCache } from "./setStateCache.js";
 
 // Classic CGI endpoints (BRP069-style). Reads and writes are both HTTP GET with
 // query parameters; the reply is `key=value,key=value`.
@@ -75,15 +83,25 @@ export class ClassicDaikinClient implements DaikinClient {
   // A unit's capabilities don't change, and `setState` needs them, so they are
   // read once.
   private capabilityFields: Promise<Record<string, string>> | undefined;
+  private readonly setStateCache: SetStateCache;
 
-  /** `close` closes `transport`, so give each client a transport of its own. */
+  /** `close` closes `transport`, so give each client a transport of its own.
+   * `maxStateAgeForSetStateInMs` defaults to 0: see
+   * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   constructor(
     private readonly transport: DaikinTransport,
     private readonly retryOptions?: DaikinRetryOptions,
-  ) {}
+    maxStateAgeForSetStateInMs = 0,
+  ) {
+    this.setStateCache = new SetStateCache(maxStateAgeForSetStateInMs);
+  }
 
   close(): Promise<void> {
     return this.transport.close();
+  }
+
+  async getDeviceInfo(): Promise<DaikinDeviceInfo> {
+    return parseDeviceInfo(await this.command(CLASSIC_ROUTES.basicInfo));
   }
 
   async getCapabilities(): Promise<DaikinCapabilities> {
@@ -91,12 +109,14 @@ export class ClassicDaikinClient implements DaikinClient {
   }
 
   async getState(): Promise<DaikinState> {
-    return parseClassicState(await this.command(CLASSIC_ROUTES.getControlInfo));
+    return parseClassicState(await this.readControlInfo());
   }
 
   async setState(control: DaikinControl): Promise<void> {
     const capabilityFields = await this.readCapabilityFields();
-    const current = await this.command(CLASSIC_ROUTES.getControlInfo);
+    const current =
+      this.setStateCache.get() ??
+      (await this.command(CLASSIC_ROUTES.getControlInfo));
     await this.command(
       CLASSIC_ROUTES.setControlInfo,
       applyClassicControl(current, control, capabilityFields),
@@ -109,12 +129,30 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
+  async getStateAndSensors(): Promise<DaikinStateAndSensors> {
+    return { state: await this.getState(), sensors: await this.getSensors() };
+  }
+
   // --- extended controls ---------------------------------------------------
-  // Each maps to its own endpoint (not control_info).
+  // Each write goes to its own endpoint, not `set_control_info`.
+
+  /** Whether the adapter's status LED is on (`basic_info`): `null` when the
+   * adapter does not report it. */
+  async getLed(): Promise<boolean | null> {
+    return parseClassicLed(await this.command(CLASSIC_ROUTES.basicInfo));
+  }
 
   /** Adapter status LED on/off (`set_led`). */
   async setLed(on: boolean): Promise<void> {
     await this.command(CLASSIC_ROUTES.setLed, encodeClassicLed(on));
+  }
+
+  /** Whether holiday mode is on (`basic_info`): `null` when the adapter does
+   * not report it. */
+  async getHolidayMode(): Promise<boolean | null> {
+    return parseClassicHolidayMode(
+      await this.command(CLASSIC_ROUTES.basicInfo),
+    );
   }
 
   /** Holiday / away mode (`set_holiday`). */
@@ -138,6 +176,14 @@ export class ClassicDaikinClient implements DaikinClient {
     await this.command(
       CLASSIC_ROUTES.setSpecialMode,
       encodeClassicSpecialMode(mode, enabled),
+    );
+  }
+
+  /** Whether the unit can be operated from outside the home network
+   * (`basic_info`): `null` when the adapter does not report it. */
+  async getOutOfHomeAccess(): Promise<boolean | null> {
+    return parseClassicOutOfHomeAccess(
+      await this.command(CLASSIC_ROUTES.basicInfo),
     );
   }
 
@@ -166,6 +212,11 @@ export class ClassicDaikinClient implements DaikinClient {
       CLASSIC_ROUTES.setTarget,
       encodeClassicEnergyTarget(target),
     );
+  }
+
+  /** Name / icon / group metadata (`basic_info`). */
+  async getMetadata(): Promise<DeviceMetadata> {
+    return parseClassicMetadata(await this.command(CLASSIC_ROUTES.basicInfo));
   }
 
   /** Name / icon / group metadata (`set_name` etc.). */
@@ -229,10 +280,25 @@ export class ClassicDaikinClient implements DaikinClient {
         path,
         ...(parameters ? { query: parameters } : {}),
       });
-    const fields = parseClassicKeyValue(
-      await (retry ? withRetry(send, this.retryOptions) : send()),
-    );
-    assertClassicOk(fields);
+    try {
+      const fields = parseClassicKeyValue(
+        await (retry ? withRetry(send, this.retryOptions) : send()),
+      );
+      assertClassicOk(fields);
+      return fields;
+    } finally {
+      // Every request that changes the unit takes parameters, and any of them
+      // may change what `get_control_info` answers, even one that failed: a
+      // request that timed out may still have reached the unit.
+      if (parameters) {
+        this.setStateCache.clear();
+      }
+    }
+  }
+
+  private async readControlInfo(): Promise<Record<string, string>> {
+    const fields = await this.command(CLASSIC_ROUTES.getControlInfo);
+    this.setStateCache.set(fields);
     return fields;
   }
 

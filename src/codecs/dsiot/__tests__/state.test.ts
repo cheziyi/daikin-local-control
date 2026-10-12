@@ -171,7 +171,25 @@ describe("parseDsiotState", () => {
       swingMode: "vertical",
       verticalPosition: "swing",
       horizontalPosition: "stop",
+      specialModes: [],
     });
+  });
+
+  it("reads the special modes whose leaves hold 01", () => {
+    expect(
+      parseDsiotState({
+        ...INDOOR_STATUS,
+        "dgc_status.e_1003.e_3002.p_44": "01",
+        "dgc_status.e_1002.e_3003.p_24": "00",
+        "dgc_status.e_1002.e_3003.p_20": "01",
+      }).specialModes,
+    ).toEqual(["powerful", "streamer"]);
+    expect(
+      parseDsiotState({
+        ...INDOOR_STATUS,
+        "dgc_status.e_1002.e_3003.p_24": "01",
+      }).specialModes,
+    ).toEqual(["econo"]);
   });
 
   it("reads each value from the current mode's own leaves", () => {
@@ -194,6 +212,7 @@ describe("parseDsiotState", () => {
       swingMode: "horizontal",
       verticalPosition: "stop",
       horizontalPosition: "swing",
+      specialModes: [],
     });
   });
 

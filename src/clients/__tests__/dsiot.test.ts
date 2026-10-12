@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   INDOOR_STATUS,
   modeLeaf,
@@ -17,12 +17,15 @@ const MULTIREQ = "/dsiot/multireq";
 
 interface Node {
   pn: string;
+  pt?: number;
   pv?: string;
   pch?: Node[];
   md?: Record<string, string | number>;
 }
 
-type Leaf = string | { pv: string; md: Record<string, string | number> };
+type Leaf =
+  | string
+  | { pv: string; pt?: number; md?: Record<string, string | number> };
 
 // Builds a reply's tree from dotted path -> pv (or { pv, md }).
 function tree(leaves: Record<string, Leaf>): Node | undefined {
@@ -67,10 +70,16 @@ function dsiotClient(transport: MockDaikinTransport): DsiotDaikinClient {
   return new DsiotDaikinClient(transport.asTransport());
 }
 
+function methodsSentTo(transport: MockDaikinTransport): string[] {
+  return transport.sent.map(({ method }) => method);
+}
+
 describe("DsiotDaikinClient", () => {
   describe("getState", () => {
-    it("posts a read of the indoor status and parses it into a DaikinState", async () => {
-      const transport = adapter(read(INDOOR_STATUS));
+    it("posts a read of the indoor and outdoor status and parses it into a DaikinState", async () => {
+      const transport = adapter(
+        read(INDOOR_STATUS, { "dgc_status.e_1003.e_3002.p_44": "01" }),
+      );
 
       expect(await dsiotClient(transport).getState()).toEqual({
         power: false,
@@ -81,12 +90,16 @@ describe("DsiotDaikinClient", () => {
         swingMode: "vertical",
         verticalPosition: "swing",
         horizontalPosition: "stop",
+        specialModes: ["powerful"],
       });
       expect(transport.sent).toStrictEqual([
         {
           method: "POST",
           path: MULTIREQ,
-          jsonBody: buildDsiotMultireqGet([DSIOT_TARGETS.indoorStatus]),
+          jsonBody: buildDsiotMultireqGet([
+            DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
+          ]),
         },
       ]);
     });
@@ -151,6 +164,162 @@ describe("DsiotDaikinClient", () => {
         ]),
       );
     });
+
+    it("reads the indoor status again after getState, without a maxStateAgeForSetStateInMs", async () => {
+      const transport = adapter(read(INDOOR_STATUS));
+      const client = dsiotClient(transport);
+
+      await client.getState();
+      await client.setState({ power: true });
+
+      expect(methodsSentTo(transport)).toEqual(["POST", "POST", "PUT"]);
+    });
+
+    describe("with a maxStateAgeForSetStateInMs", () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      function reusingClient(
+        transport: MockDaikinTransport,
+      ): DsiotDaikinClient {
+        vi.useFakeTimers();
+        return new DsiotDaikinClient(
+          transport.asTransport(),
+          undefined,
+          60_000,
+        );
+      }
+
+      it("applies the control to the status getState read, without reading again", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(59_999);
+        await client.setState({ power: true, targetTemperatureInC: 22 });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "PUT"]);
+        expect(transport.sent.at(-1)?.jsonBody).toEqual(
+          buildDsiotMultireqUpdate([
+            { path: DSIOT_PATHS.power, value: "01" },
+            { path: DSIOT_PATHS.powerTransition, value: "00" },
+            { path: DSIOT_PATHS.mode, value: "0200" },
+            { path: modeLeaf("p_02"), value: "2c" },
+          ]),
+        );
+      });
+
+      it("applies the control to the status getStateAndSensors read", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getStateAndSensors();
+        await client.setState({ power: true });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "PUT"]);
+      });
+
+      it("reads the indoor status again once the reply is that old", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        vi.advanceTimersByTime(60_000);
+        await client.setState({ power: true });
+
+        expect(methodsSentTo(transport)).toEqual(["POST", "POST", "PUT"]);
+      });
+
+      it("reads the indoor status again for the write after a write", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.setState({ mode: "heat" });
+        await client.setState({ targetTemperatureInC: 22 });
+
+        expect(methodsSentTo(transport)).toEqual([
+          "POST",
+          "PUT",
+          "POST",
+          "PUT",
+        ]);
+      });
+
+      it("reads the indoor status again after multireqUpdate", async () => {
+        const transport = adapter(read(INDOOR_STATUS));
+        const client = reusingClient(transport);
+
+        await client.getState();
+        await client.multireqUpdate([{ path: DSIOT_PATHS.power, value: "01" }]);
+        await client.setState({ power: false });
+
+        expect(methodsSentTo(transport)).toEqual([
+          "POST",
+          "PUT",
+          "POST",
+          "PUT",
+        ]);
+      });
+    });
+  });
+
+  describe("getStateAndSensors", () => {
+    it("parses the state and the sensors from one read of the indoor and outdoor status", async () => {
+      const transport = adapter(
+        read(INDOOR_STATUS, { [DSIOT_PATHS.outdoorTemperature]: "3E00" }),
+      );
+
+      expect(await dsiotClient(transport).getStateAndSensors()).toEqual({
+        state: {
+          power: false,
+          mode: "cool",
+          targetTemperatureInC: 24,
+          targetHumidity: null,
+          fanSpeed: "auto",
+          swingMode: "vertical",
+          verticalPosition: "swing",
+          horizontalPosition: "stop",
+          specialModes: [],
+        },
+        sensors: {
+          indoorTemperatureInC: 26,
+          indoorHumidityInPercent: 55,
+          outdoorTemperatureInC: 31,
+        },
+      });
+      expect(transport.sent).toStrictEqual([
+        {
+          method: "POST",
+          path: MULTIREQ,
+          jsonBody: buildDsiotMultireqGet([
+            DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
+          ]),
+        },
+      ]);
+    });
+  });
+
+  describe("getDeviceInfo", () => {
+    it("reads the adapter info", async () => {
+      const transport = adapter(
+        read({ "adp_i.mac": "A408EACC91D4", "adp_i.ver": "1_14_88" }),
+      );
+
+      expect(await dsiotClient(transport).getDeviceInfo()).toEqual({
+        macAddress: "A4:08:EA:CC:91:D4",
+        firmwareVersion: "1.14.88",
+      });
+      expect(transport.sent).toStrictEqual([
+        {
+          method: "POST",
+          path: MULTIREQ,
+          jsonBody: buildDsiotMultireqGet([DSIOT_TARGETS.adapterInfo]),
+        },
+      ]);
+    });
   });
 
   describe("getSensors", () => {
@@ -178,7 +347,7 @@ describe("DsiotDaikinClient", () => {
   });
 
   describe("getCapabilities", () => {
-    it("reads the adapter info and the indoor status, with its metadata", async () => {
+    it("reads the adapter info and the indoor and outdoor status, with their metadata", async () => {
       const transport = adapter(
         read(
           { "adp_i.reg": "sg", "adp_i.kind": "4" },
@@ -186,6 +355,7 @@ describe("DsiotDaikinClient", () => {
             ...INDOOR_STATUS,
             [modeLeaf("p_02")]: { pv: "3000", md: { mi: "2400", mx: "3800" } },
           },
+          { "dgc_status.e_1003.e_3002.p_44": { pv: "00", pt: 2 } },
         ),
       );
 
@@ -198,9 +368,11 @@ describe("DsiotDaikinClient", () => {
           jsonBody: buildDsiotMultireqGet([
             DSIOT_TARGETS.adapterInfo,
             DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
           ]),
         },
       ]);
+      expect(capabilities.specialModes.cool).toEqual(["powerful"]);
       expect(capabilities.targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 28,

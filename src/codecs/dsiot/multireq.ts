@@ -20,11 +20,12 @@ export const DSIOT_EDGES = {
 const EDGE_ROOT = "/dsiot/edge";
 
 /** What a read fetches, as the `to` of a request: whole trees, never single
- * leaves. */
+ * leaves. The status trees come with `pt`, which `parseDsiotCapabilities`
+ * reads. */
 export const DSIOT_TARGETS = {
   adapterInfo: `${EDGE_ROOT}.adp_i?filter=pv`,
-  indoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.indoor}.dgc_status?filter=pv,md`,
-  outdoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.outdoor}.dgc_status?filter=pv,md`,
+  indoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.indoor}.dgc_status?filter=pv,pt,md`,
+  outdoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.outdoor}.dgc_status?filter=pv,pt,md`,
 } as const;
 
 interface PropertyNode {
@@ -92,7 +93,8 @@ function childNamed(siblings: PropertyNode[], name: string): PropertyNode {
 }
 
 /** Flattens a `/dsiot/multireq` reply into dotted paths -> `pv`, plus
- * `<path>.md.mi` / `.md.mx` / `.md.st` where metadata came back.
+ * `<path>.pt` where a leaf's type came back and `<path>.md.mi` / `.md.mx` /
+ * `.md.st` where metadata did.
  *
  * Each of its `responses` carries its own `rsc`; any not starting with 200 is
  * the adapter refusing, and throws a `DaikinError`: status 401 for `rsc` 401
@@ -148,6 +150,9 @@ function flatten(
   }
   if (node.pv !== undefined) {
     values[path] = stringify(node.pv);
+  }
+  if (node.pt !== undefined) {
+    values[`${path}.pt`] = stringify(node.pt);
   }
   for (const key of ["mi", "mx", "st"] as const) {
     const metadata = node.md?.[key];

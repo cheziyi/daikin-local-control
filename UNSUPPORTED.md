@@ -17,7 +17,16 @@ To add one, pin down the request and reply first, then delete its row.
 | Classic schedule demand mode (`mode=1`) | The full format of the weekly table it needs (`moc`..`suc`, `<day><n>_en`/`_t`/`_p`). | `ClassicDaikinClient.command()` |
 | Classic special mode `spmode_kind=4` (heat plus) | Which units take it. | `ClassicDaikinClient.command()` |
 | Timers, weekly programs, schedule timers (`/aircon/get_timer`, `set_timer`, `get_program`, `set_program`, `get_scdltimer_info`, `get_scdltimer_body`, `set_scdltimer_info`, `set_scdltimer_body`) | Their parameters. | `ClassicDaikinClient.command()` |
-| Classic setting reads: `/aircon/get_demand_control`, `/aircon/get_price`, `/aircon/get_target`, `/common/get_holiday` | The reply fields. | `ClassicDaikinClient.command()` |
+| Classic setting reads: `/aircon/get_demand_control`, `/aircon/get_price`, `/aircon/get_target`, `/common/get_holiday` | The reply fields. `getHolidayMode` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
+| Classic `method` in `/common/get_remote_method` | Whether the reply carries it. `getOutOfHomeAccess` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
+| Energy history: classic `/aircon/get_week_power`, `get_year_power`, `get_day_power_ex`, `get_week_power_ex`, `get_year_power_ex`, and DSIOT `adr_0100.history` | The unit of each value, and which day or month each position in a list stands for. | `ClassicDaikinClient.command()` |
+| Power draw: classic `mompow` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_A005.p_01` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
+| Compressor frequency: classic `cmpfreq` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_2006.p_04` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
+| Error code: classic `err` in `/aircon/get_sensor_info` and `/common/basic_info` | Which code on the unit's display each number stands for. | `ClassicDaikinClient.command()` |
+| Reading the settings of a DSIOT adapter: LED, holiday mode, name, icon, group | The value encoding of each `adp_d` leaf. | `DsiotDaikinClient.multireqGet()` |
+| Special modes through `setState`, and on a DSIOT adapter at all | Whether a DSIOT adapter accepts a write to the leaves `getState` reads, and which value turns a mode on. | `ClassicDaikinClient.setSpecialMode()`, `DsiotDaikinClient.multireqUpdate()` |
+| Classic `powerful` and `econo` on a unit whose `cpv` is not 3, or whose `cpv_minor` is `00` or missing | Whether such a unit takes them. `getCapabilities` lists neither for it, whatever its `en_spmode`. | `ClassicDaikinClient.setSpecialMode()` |
+| `econo` in fan mode | Whether a unit takes it. `getCapabilities` lists it in every mode but fan. | `ClassicDaikinClient.setSpecialMode()` |
 | Classic notifications, clock and account: `/common/get_notify`, `set_notify`, `set_push_notice`, `set_timezone`, `notify_date_time`, `set_account` | Their parameters. | `ClassicDaikinClient.command()` |
 | Classic network: `/common/get_network_setting`, `set_network_setting`, `start_wifi_scan`, `get_wifi_scan_result`, `start_wifi_connection`, `permit_wifi_connection`, `set_lpw` | Their parameters. | `ClassicDaikinClient.command()` |
 | Classic firmware update: a POST to `/dkac/system/fwupdate` | The format of the upload. | Not reachable |
