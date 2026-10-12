@@ -336,4 +336,4 @@ your own risk.
 
 ## License
 
-[GPL-3.0-or-later](LICENSE). Copyright © 2026 the contributors.
+[MIT](LICENSE). Copyright © 2026 the contributors.

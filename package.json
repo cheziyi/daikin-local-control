@@ -33,7 +33,7 @@
     "australia",
     "new-zealand"
   ],
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "homepage": "https://github.com/cheziyi/daikin-local-control#readme",
   "bugs": "https://github.com/cheziyi/daikin-local-control/issues",
   "repository": {
