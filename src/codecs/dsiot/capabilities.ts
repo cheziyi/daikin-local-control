@@ -55,8 +55,8 @@ type LouverAxis = "vertical" | "horizontal";
 
 /** Turns the flattened `adp_i` tree and the indoor and outdoor `dgc_status`
  * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
- * degrees. Without the outdoor tree, `specialModes` lists no `powerful`.
- * Econo is listed in no fan mode: see UNSUPPORTED.md. */
+ * degrees. Without the outdoor tree, `specialModes` lists no `powerful`. It
+ * lists econo in every mode but fan: see UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {

@@ -119,8 +119,8 @@ export function parseClassicCapabilities(
   };
 }
 
-// A unit that reports no `en_spmode` lists none. Econo is listed in no fan
-// mode: see UNSUPPORTED.md.
+// Lists none for a unit that reports no `en_spmode`, and econo in every mode
+// but fan: see UNSUPPORTED.md.
 function specialModes(
   fields: Record<string, string>,
   cpv: string,

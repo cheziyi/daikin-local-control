@@ -52,8 +52,8 @@ export function decodeMacAddress(
 }
 
 /** The adapter sends a version as three numbers joined by underscores, with a
- * fourth part, `pre`, on a pre-release. A value in any other shape decodes to
- * `undefined`. */
+ * fourth part, `pre`, on a pre-release. This drops any other fourth part, and
+ * decodes a value that is not three numbers to `undefined`. */
 export function decodeFirmwareVersion(
   value: string | undefined,
 ): string | undefined {

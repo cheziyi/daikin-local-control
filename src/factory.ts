@@ -29,8 +29,8 @@ export interface CreateDaikinClientOptions {
   /** How old, in milliseconds, a reply to `getState` or `getStateAndSensors`
    * may be for `setState` to build its write from it instead of reading the
    * unit first. Defaults to 0: `setState` always reads first. It changes no
-   * read: `getState` asks the unit every time. A change made on the remote
-   * control since that reply is undone by the write: see
+   * read: `getState` asks the unit every time. The write undoes a change made
+   * on the remote control since that reply: see
    * DESIGN.md#the-read-before-a-write. */
   maxStateAgeForSetStateInMs?: number;
   /** HTTPS adapters only. Without a CA the adapter's certificate isn't verified. */
