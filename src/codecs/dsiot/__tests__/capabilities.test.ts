@@ -45,14 +45,20 @@ describe("parseDsiotCapabilities", () => {
       swingModes: ["off", "vertical", "horizontal", "both"],
       verticalPositions: ["stop", "swing"],
       horizontalPositions: ["stop"],
-      targetTemperatureInC: {
+      targetTemperaturesInC: {
         auto: { min: 18, max: 30, step: 0.5 },
         cool: { min: 18, max: 32, step: 0.5 },
         heat: { min: 10, max: 30, step: 0.5 },
         dehumidify: null,
         fan: null,
       },
-      targetHumidity: { auto: [], dehumidify: [], cool: [], heat: [], fan: [] },
+      targetHumidities: {
+        auto: [],
+        dehumidify: [],
+        cool: [],
+        heat: [],
+        fan: [],
+      },
       specialOutlet: false,
       energyMonitoring: false,
       demandControl: false,
@@ -68,14 +74,14 @@ describe("parseDsiotCapabilities", () => {
       });
 
       expect(coolingOnly.modes).toEqual(["dehumidify", "cool", "fan"]);
-      expect(coolingOnly.targetTemperatureInC.heat).toBeNull();
-      expect(coolingOnly.targetTemperatureInC.auto).toBeNull();
+      expect(coolingOnly.targetTemperaturesInC.heat).toBeNull();
+      expect(coolingOnly.targetTemperaturesInC.auto).toBeNull();
     });
   });
 
-  describe("targetTemperatureInC", () => {
+  describe("targetTemperaturesInC", () => {
     it("reads the cool and heat limits from md.mi and md.mx, in half degrees", () => {
-      const { targetTemperatureInC } = parseDsiotCapabilities({
+      const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
         [`${COOL_SETPOINT}.md.mi`]: "2800",
         [`${COOL_SETPOINT}.md.mx`]: "3800",
@@ -84,12 +90,12 @@ describe("parseDsiotCapabilities", () => {
         [`${HEAT_SETPOINT}.md.mx`]: "3400",
       });
 
-      expect(targetTemperatureInC.cool).toEqual({
+      expect(targetTemperaturesInC.cool).toEqual({
         min: 20,
         max: 28,
         step: 0.5,
       });
-      expect(targetTemperatureInC.heat).toEqual({
+      expect(targetTemperaturesInC.heat).toEqual({
         min: 12,
         max: 26,
         step: 0.5,
@@ -97,7 +103,7 @@ describe("parseDsiotCapabilities", () => {
     });
 
     it("caps the cool limit at 32 °C and the heat limit at 30 °C", () => {
-      const { targetTemperatureInC } = parseDsiotCapabilities({
+      const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
         [`${COOL_SETPOINT}.md.mi`]: "2400",
         [`${COOL_SETPOINT}.md.mx`]: "4600",
@@ -105,12 +111,12 @@ describe("parseDsiotCapabilities", () => {
         [`${HEAT_SETPOINT}.md.mx`]: "4000",
       });
 
-      expect(targetTemperatureInC.cool).toEqual({
+      expect(targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 32,
         step: 0.5,
       });
-      expect(targetTemperatureInC.heat).toEqual({
+      expect(targetTemperaturesInC.heat).toEqual({
         min: 10,
         max: 30,
         step: 0.5,
@@ -118,13 +124,13 @@ describe("parseDsiotCapabilities", () => {
     });
 
     it("keeps a limit that falls on a half degree", () => {
-      const { targetTemperatureInC } = parseDsiotCapabilities({
+      const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
         [`${COOL_SETPOINT}.md.mi`]: "2300",
         [`${COOL_SETPOINT}.md.mx`]: "3900",
       });
 
-      expect(targetTemperatureInC.cool).toEqual({
+      expect(targetTemperaturesInC.cool).toEqual({
         min: 17.5,
         max: 28.5,
         step: 0.5,
@@ -132,12 +138,12 @@ describe("parseDsiotCapabilities", () => {
     });
 
     it("ignores a limit that came without the other", () => {
-      const { targetTemperatureInC } = parseDsiotCapabilities({
+      const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
         [`${COOL_SETPOINT}.md.mi`]: "2800",
       });
 
-      expect(targetTemperatureInC.cool).toEqual({
+      expect(targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 32,
         step: 0.5,
@@ -279,7 +285,7 @@ describe("parseDsiotCapabilities", () => {
     });
   });
 
-  describe("targetHumidity", () => {
+  describe("targetHumidities", () => {
     const SETTINGS = ["autoLow", "auto", "autoHigh", "continuous"];
 
     it("offers the settings in each mode that has a humidity flag leaf, without off in dehumidify", () => {
@@ -288,7 +294,7 @@ describe("parseDsiotCapabilities", () => {
           ...UNIT,
           [COOL_HUMIDITY_FLAG]: "01",
           [DEHUMIDIFY_HUMIDITY_FLAG]: "00",
-        }).targetHumidity,
+        }).targetHumidities,
       ).toEqual({
         auto: [],
         dehumidify: SETTINGS,
@@ -305,7 +311,7 @@ describe("parseDsiotCapabilities", () => {
           [DSIOT_PATHS.modelType]: "01",
           [COOL_HUMIDITY_FLAG]: "00",
           [HEAT_HUMIDITY_FLAG]: "00",
-        }).targetHumidity,
+        }).targetHumidities,
       ).toMatchObject({ cool: ["off", ...SETTINGS], heat: [] });
     });
   });

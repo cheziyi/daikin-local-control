@@ -261,9 +261,9 @@ describe("withRetry", () => {
 
   it("retries at once, then after 50, 100, 200 and 400 ms", async () => {
     const startedAt = Date.now();
-    const attemptedAfterInMs: number[] = [];
+    const attemptTimesInMs: number[] = [];
     const operation = vi.fn(async () => {
-      attemptedAfterInMs.push(Date.now() - startedAt);
+      attemptTimesInMs.push(Date.now() - startedAt);
       throw dropped;
     });
 
@@ -271,7 +271,7 @@ describe("withRetry", () => {
     await vi.runAllTimersAsync();
     await result;
 
-    expect(attemptedAfterInMs).toEqual([0, 0, 50, 150, 350, 750]);
+    expect(attemptTimesInMs).toEqual([0, 0, 50, 150, 350, 750]);
   });
 
   it("throws the DaikinConnectionError of the sixth attempt", async () => {
@@ -299,9 +299,9 @@ describe("withRetry", () => {
 
   it("retries once after each of delaysInMs", async () => {
     const startedAt = Date.now();
-    const attemptedAfterInMs: number[] = [];
+    const attemptTimesInMs: number[] = [];
     const operation = vi.fn(async () => {
-      attemptedAfterInMs.push(Date.now() - startedAt);
+      attemptTimesInMs.push(Date.now() - startedAt);
       throw dropped;
     });
 
@@ -311,7 +311,7 @@ describe("withRetry", () => {
     await vi.runAllTimersAsync();
     await result;
 
-    expect(attemptedAfterInMs).toEqual([0, 10, 1010]);
+    expect(attemptTimesInMs).toEqual([0, 10, 1010]);
   });
 
   it("runs the operation once when delaysInMs is empty", async () => {

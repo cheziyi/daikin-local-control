@@ -193,7 +193,7 @@ describe("ClassicDaikinClient", () => {
       expect(capabilities.modes).toEqual(["dehumidify", "cool", "fan"]);
       expect(capabilities.demandControl).toBe(true);
       expect(capabilities.fanSpeeds).toContain("auto");
-      expect(capabilities.targetTemperatureInC.cool).toEqual({
+      expect(capabilities.targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 32,
         step: 1,

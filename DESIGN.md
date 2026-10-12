@@ -26,7 +26,7 @@ is not safe to repeat.
 ## Capabilities
 
 `DaikinCapabilities` lists what a unit accepts in the vocabulary of `DaikinState`:
-`fanSpeeds` holds `FanSpeed` values, and `targetTemperatureInC` holds one range per
+`fanSpeeds` holds `FanSpeed` values, and `targetTemperaturesInC` holds one range per
 `OperatingMode`, `null` where the mode has no setpoint or the unit does not offer it.
 
 Rejected: a `DaikinCapabilities` shaped like the adapter's own flags (`fan.controllable`,
@@ -55,7 +55,7 @@ and `get_model_info` fields and passing them to `parseClassicCapabilities`.
 
 `DaikinState.targetHumidity` holds a `HumiditySetting` such as `off` or
 `autoHigh`, or a percentage as `{ percent: 50 }`, and
-`DaikinCapabilities.targetHumidity` lists, for each mode, the values a unit
+`DaikinCapabilities.targetHumidities` lists, for each mode, the values a unit
 takes. `setState` still encodes a percentage it is given, as it encodes a fan
 speed outside `DaikinCapabilities.fanSpeeds`.
 
@@ -74,7 +74,7 @@ Rejected: a percentage as a bare `number`, with 0 for off.
 - The field holds a setting as often as a quantity, so its name cannot carry
   the unit, and a caller read `targetHumidity: 50` without one.
 - Off is a setting, not a quantity: a unit that takes no percentage still
-  takes off, so 0 was the one number `DaikinCapabilities.targetHumidity`
+  takes off, so 0 was the one number `DaikinCapabilities.targetHumidities`
   listed beside the named settings.
 
 ## Louver positions

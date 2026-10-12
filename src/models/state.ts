@@ -75,7 +75,7 @@ export const HUMIDITY_SETTINGS = [
 export type HumiditySetting = (typeof HUMIDITY_SETTINGS)[number];
 
 /** A `HumiditySetting` or a percentage.
- * `DaikinCapabilities.targetHumidity` lists which of them a unit takes. */
+ * `DaikinCapabilities.targetHumidities` lists which of them a unit takes. */
 export type TargetHumidity = HumiditySetting | { percent: number };
 
 export interface DaikinState {
