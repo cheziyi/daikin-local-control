@@ -119,7 +119,7 @@ again.
 ```ts
 import { randomUUID } from "node:crypto";
 
-const savedUuid = loadFromConfiguration() ?? saveToConfiguration(randomUUID());
+const savedUuid = loadFromConfig() ?? saveToConfig(randomUUID());
 ```
 
 **KEY (when `device.requiresRegistration` is `true`).** These

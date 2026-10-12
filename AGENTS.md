@@ -67,10 +67,11 @@ changing the code it covers.
 
 ## Names
 
-- **Do not abbreviate.** Write the full descriptive name unless the
-  abbreviation is the better-known spelling: `UUID`, not
-  `universallyUniqueIdentifier`; `Configuration`, not `Config`. A name the
-  device protocol defines keeps its spelling, such as `f_dir_ud` or `adp_kind`.
+- **Abbreviate only where the abbreviation is well known.** `Info`, `Config`,
+  `min`, `max`, and an initialism such as `UUID`, `MAC` or `URL` are. Write any
+  other word in full: `parameters`, not `params`; `options`, not `opts`;
+  `temperature`, not `temp`. A name the device protocol defines keeps its
+  spelling, such as `f_dir_ud` or `adp_kind`.
 - **Name a file for what it exports, and let its folder carry the rest**:
   `clients/classic.ts`, not `clients/classicClient.ts`. Keep the name singular
   unless the export's own name is plural: `state.ts` for `DaikinState`,
