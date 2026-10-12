@@ -26,7 +26,24 @@ describe("parseClassicState", () => {
       swingMode: "vertical",
       verticalPosition: null,
       horizontalPosition: null,
+      specialModes: [],
     });
+  });
+
+  it.each([
+    ["2", ["powerful"]],
+    ["12", ["econo"]],
+    ["13", ["streamer"]],
+    ["13/2", ["powerful", "streamer"]],
+    ["", []],
+  ] as const)("reads adv=%s as the special modes %j", (adv, specialModes) => {
+    expect(parseClassicState({ adv }).specialModes).toEqual(specialModes);
+  });
+
+  it("leaves out an adv code outside SpecialMode", () => {
+    expect(parseClassicState({ adv: "2/14" }).specialModes).toEqual([
+      "powerful",
+    ]);
   });
 
   it("reads any pow but 1 as off", () => {

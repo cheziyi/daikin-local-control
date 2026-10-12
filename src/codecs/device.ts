@@ -1,4 +1,5 @@
-import type { DaikinDevice } from "../models/device.js";
+import type { DaikinDevice, DaikinDeviceInfo } from "../models/device.js";
+import { decodeClassicText } from "./classic/keyValue.js";
 
 const DSIOT_TYPE = "GPF";
 const MARVELL_ADP_KIND = "3";
@@ -15,7 +16,10 @@ export function parseDevice(
   return {
     host: basicInfo.api_port ? `${host}:${basicInfo.api_port}` : host,
     protocol,
-    name: decodeName(basicInfo.name),
+    name:
+      basicInfo.name === undefined
+        ? undefined
+        : decodeClassicText(basicInfo.name),
     // Only classic adapters register terminals.
     requiresRegistration: secure && protocol === "classic",
     // Only a Marvell adapter (adp_kind=3) in secure mode speaks HTTPS; every
@@ -25,17 +29,38 @@ export function parseDevice(
       protocol === "classic" &&
       basicInfo.adp_kind === MARVELL_ADP_KIND,
     requiresLocalPassword: basicInfo.lpw_flag === "1",
+    ...parseDeviceInfo(basicInfo),
   };
 }
 
-// The name is form-encoded: `+` is a space.
-function decodeName(value: string | undefined): string | undefined {
-  if (value === undefined) {
+/** Reads what a `basic_info` reply says to identify the adapter. */
+export function parseDeviceInfo(
+  basicInfo: Record<string, string>,
+): DaikinDeviceInfo {
+  return {
+    macAddress: decodeMacAddress(basicInfo.mac),
+    firmwareVersion: decodeFirmwareVersion(basicInfo.ver),
+  };
+}
+
+/** The adapter sends a MAC address without separators. It keeps the adapter's
+ * letter case. */
+export function decodeMacAddress(
+  value: string | undefined,
+): string | undefined {
+  return value ? value.replace(/..(?=..)/g, "$&:") : undefined;
+}
+
+/** The adapter sends a version as three numbers joined by underscores, with a
+ * fourth part, `pre`, on a pre-release. A value in any other shape decodes to
+ * `undefined`. */
+export function decodeFirmwareVersion(
+  value: string | undefined,
+): string | undefined {
+  const parts = /^(\d+)_(\d+)_(\d+)(?:_([^_]*))?$/.exec(value ?? "");
+  if (parts === null) {
     return undefined;
   }
-  try {
-    return decodeURIComponent(value.replaceAll("+", " "));
-  } catch {
-    return value;
-  }
+  const version = parts.slice(1, 4).map(Number).join(".");
+  return parts[4] === "pre" ? `${version}.pre` : version;
 }

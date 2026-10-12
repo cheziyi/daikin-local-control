@@ -15,6 +15,12 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
+  parseClassicEnergyPrice,
+  parseClassicEnergyTarget,
+  parseClassicHolidayMode,
+  parseClassicLed,
+  parseClassicMetadata,
+  parseClassicOutOfHomeAccess,
 } from "../codecs/classic/extendedControl.js";
 import {
   assertClassicOk,
@@ -25,17 +31,19 @@ import {
   parseClassicSensors,
   parseClassicState,
 } from "../codecs/classic/state.js";
+import { parseDeviceInfo } from "../codecs/device.js";
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DemandControl,
   DeviceMetadata,
-  SpecialMode,
   TerminalScope,
 } from "../models/extendedControl.js";
 import type {
   DaikinControl,
   DaikinSensors,
   DaikinState,
+  SpecialMode,
 } from "../models/state.js";
 import {
   type DaikinRequestOptions,
@@ -55,7 +63,9 @@ const CLASSIC_ROUTES = {
   getSensorInfo: "/aircon/get_sensor_info",
   setSpecialMode: "/aircon/set_special_mode",
   setDemandControl: "/aircon/set_demand_control",
+  getPrice: "/aircon/get_price",
   setPrice: "/aircon/set_price",
+  getTarget: "/aircon/get_target",
   setTarget: "/aircon/set_target",
   setLed: "/common/set_led",
   setHoliday: "/common/set_holiday",
@@ -86,6 +96,10 @@ export class ClassicDaikinClient implements DaikinClient {
     return this.transport.close();
   }
 
+  async getDeviceInfo(): Promise<DaikinDeviceInfo> {
+    return parseDeviceInfo(await this.command(CLASSIC_ROUTES.basicInfo));
+  }
+
   async getCapabilities(): Promise<DaikinCapabilities> {
     return parseClassicCapabilities(await this.readCapabilityFields());
   }
@@ -110,11 +124,25 @@ export class ClassicDaikinClient implements DaikinClient {
   }
 
   // --- extended controls ---------------------------------------------------
-  // Each maps to its own endpoint (not control_info).
+  // Each write goes to its own endpoint, not `set_control_info`.
+
+  /** Whether the adapter's status LED is on (`basic_info`): `null` when the
+   * adapter does not report it. */
+  async getLed(): Promise<boolean | null> {
+    return parseClassicLed(await this.command(CLASSIC_ROUTES.basicInfo));
+  }
 
   /** Adapter status LED on/off (`set_led`). */
   async setLed(on: boolean): Promise<void> {
     await this.command(CLASSIC_ROUTES.setLed, encodeClassicLed(on));
+  }
+
+  /** Whether holiday mode is on (`basic_info`): `null` when the adapter does
+   * not report it. */
+  async getHolidayMode(): Promise<boolean | null> {
+    return parseClassicHolidayMode(
+      await this.command(CLASSIC_ROUTES.basicInfo),
+    );
   }
 
   /** Holiday / away mode (`set_holiday`). */
@@ -142,6 +170,14 @@ export class ClassicDaikinClient implements DaikinClient {
   }
 
   /** Whether the unit can be operated from outside the home network
+   * (`get_remote_method`). */
+  async getOutOfHomeAccess(): Promise<boolean> {
+    return parseClassicOutOfHomeAccess(
+      await this.command(CLASSIC_ROUTES.getRemoteMethod),
+    );
+  }
+
+  /** Whether the unit can be operated from outside the home network
    * (`set_remote_method`). */
   async setOutOfHomeAccess(enabled: boolean): Promise<void> {
     const current = await this.command(CLASSIC_ROUTES.getRemoteMethod);
@@ -149,6 +185,12 @@ export class ClassicDaikinClient implements DaikinClient {
       CLASSIC_ROUTES.setRemoteMethod,
       applyClassicOutOfHomeAccess(current, enabled),
     );
+  }
+
+  /** Electricity price per kWh (`get_price`): `null` when the adapter does not
+   * report it. */
+  async getEnergyPrice(): Promise<number | null> {
+    return parseClassicEnergyPrice(await this.command(CLASSIC_ROUTES.getPrice));
   }
 
   /** Electricity price per kWh for the consumption estimates (`set_price`),
@@ -160,12 +202,25 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
+  /** Energy target for the "target" feature (`get_target`): `null` when the
+   * adapter does not report it. */
+  async getEnergyTarget(): Promise<number | null> {
+    return parseClassicEnergyTarget(
+      await this.command(CLASSIC_ROUTES.getTarget),
+    );
+  }
+
   /** Energy target for the "target" feature (`set_target`). */
   async setEnergyTarget(target: number): Promise<void> {
     await this.command(
       CLASSIC_ROUTES.setTarget,
       encodeClassicEnergyTarget(target),
     );
+  }
+
+  /** Name / icon / group metadata (`basic_info`). */
+  async getMetadata(): Promise<DeviceMetadata> {
+    return parseClassicMetadata(await this.command(CLASSIC_ROUTES.basicInfo));
   }
 
   /** Name / icon / group metadata (`set_name` etc.). */

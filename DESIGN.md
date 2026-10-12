@@ -96,3 +96,17 @@ Rejected: positions as the numbers 0 to 25, typed `number`, with
 - A caller learned of a mistyped number only when the call ran.
 - The `Error` was the one failure of `setState` that was not a
   `DaikinError`.
+
+## Special modes
+
+`DaikinState.specialModes` lists the special modes that are on, and `getState`
+reads it on both protocols. `DaikinControl` leaves it out, so `setState` is
+never handed a field it cannot write: UNSUPPORTED.md says what is not known.
+
+Rejected: a `getSpecialModes` on `ClassicDaikinClient`, beside `setSpecialMode`.
+
+- A classic adapter reports the modes in `adv`, in the `get_control_info` reply
+  `getState` already reads, so the method sent a second request for a reply the
+  caller had.
+- A DSIOT adapter reports them in its `dgc_status` trees, and a method on
+  `ClassicDaikinClient` gave a caller no way to read those.

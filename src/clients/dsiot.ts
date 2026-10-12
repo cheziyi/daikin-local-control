@@ -1,4 +1,5 @@
 import { parseDsiotCapabilities } from "../codecs/dsiot/capabilities.js";
+import { parseDsiotDeviceInfo } from "../codecs/dsiot/device.js";
 import {
   buildDsiotMultireqGet,
   buildDsiotMultireqUpdate,
@@ -12,6 +13,7 @@ import {
   parseDsiotState,
 } from "../codecs/dsiot/state.js";
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DaikinControl,
   DaikinSensors,
@@ -45,6 +47,12 @@ export class DsiotDaikinClient implements DaikinClient {
     return this.transport.close();
   }
 
+  async getDeviceInfo(): Promise<DaikinDeviceInfo> {
+    return parseDsiotDeviceInfo(
+      await this.multireqGet([DSIOT_TARGETS.adapterInfo]),
+    );
+  }
+
   async getCapabilities(): Promise<DaikinCapabilities> {
     return parseDsiotCapabilities(
       await this.multireqGet([
@@ -56,7 +64,10 @@ export class DsiotDaikinClient implements DaikinClient {
 
   async getState(): Promise<DaikinState> {
     return parseDsiotState(
-      await this.multireqGet([DSIOT_TARGETS.indoorStatus]),
+      await this.multireqGet([
+        DSIOT_TARGETS.indoorStatus,
+        DSIOT_TARGETS.outdoorStatus,
+      ]),
     );
   }
 

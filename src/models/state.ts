@@ -78,6 +78,10 @@ export type HumiditySetting = (typeof HUMIDITY_SETTINGS)[number];
  * `DaikinCapabilities.targetHumidities` lists which of them a unit takes. */
 export type TargetHumidity = HumiditySetting | { percent: number };
 
+export const SPECIAL_MODES = ["powerful", "econo", "streamer"] as const;
+
+export type SpecialMode = (typeof SPECIAL_MODES)[number];
+
 export interface DaikinState {
   power: boolean;
   mode: OperatingMode;
@@ -93,14 +97,19 @@ export interface DaikinState {
   /** On a 3D unit. `null` where the unit reports none, or one outside
    * `HorizontalPosition`. */
   horizontalPosition: HorizontalPosition | null;
+  /** The special modes that are on, in the order of `SPECIAL_MODES`; empty
+   * when none is. `setState` does not take it: see `DaikinControl`. */
+  specialModes: SpecialMode[];
 }
 
 /** A partial `DaikinState`, as `DaikinClient.setState` takes it: set only the
  * fields to change. The client reads the current state, overlays the control,
  * and writes the whole state back. It drops a field the unit does not take in
  * the target mode, such as a louver position outside
- * `DaikinCapabilities.verticalPositions`. */
-export type DaikinControl = Partial<DaikinState>;
+ * `DaikinCapabilities.verticalPositions`. It takes no `specialModes`: a
+ * classic adapter is set one with `ClassicDaikinClient.setSpecialMode`, and
+ * UNSUPPORTED.md says what is not known about the rest. */
+export type DaikinControl = Partial<Omit<DaikinState, "specialModes">>;
 
 /** A reading is `null` when the unit does not report it. */
 export interface DaikinSensors {

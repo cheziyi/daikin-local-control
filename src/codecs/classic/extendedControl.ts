@@ -2,12 +2,14 @@ import type {
   DemandControl,
   DemandMode,
   DeviceGroup,
-  SpecialMode,
+  DeviceMetadata,
   TerminalScope,
 } from "../../models/extendedControl.js";
+import type { SpecialMode } from "../../models/state.js";
+import { decodeClassicText } from "./keyValue.js";
 
-// Encodes each control outside `control_info` as the query its classic `set_*`
-// endpoint takes.
+// Encodes each control outside `DaikinState` as the query its classic `set_*`
+// endpoint takes, and reads each one back from the reply that reports it.
 
 const TERMINAL_SCOPE_CODES: Record<TerminalScope, string> = {
   self: "0",
@@ -20,8 +22,8 @@ const DEMAND_MODE_CODES: Record<DemandMode, string> = {
   auto: "2",
 };
 
-// `spmode_kind` on the wire; control_info's `adv` reports powerful as 2 and
-// econo as 12.
+// `spmode_kind` on the wire, which numbers the modes differently from the
+// `adv` that `parseClassicState` reads.
 const SPECIAL_MODE_KIND_CODES: Record<
   Exclude<SpecialMode, "streamer">,
   string
@@ -41,10 +43,25 @@ export function encodeClassicLed(on: boolean): Record<string, string> {
   return { led: flag(on) };
 }
 
+/** Reads the LED from a `basic_info` reply: `null` when it carries no `led`. */
+export function parseClassicLed(
+  fields: Record<string, string>,
+): boolean | null {
+  return parseFlag(fields.led);
+}
+
 export function encodeClassicHolidayMode(
   enabled: boolean,
 ): Record<string, string> {
   return { en_hol: flag(enabled) };
+}
+
+/** Reads holiday mode from a `basic_info` reply: `null` when it carries no
+ * `en_hol`. */
+export function parseClassicHolidayMode(
+  fields: Record<string, string>,
+): boolean | null {
+  return parseFlag(fields.en_hol);
 }
 
 export function encodeClassicDemandControl(
@@ -65,6 +82,13 @@ export function encodeClassicSpecialMode(
   return mode === "streamer"
     ? { en_streamer: flag(enabled) }
     : { set_spmode: flag(enabled), spmode_kind: SPECIAL_MODE_KIND_CODES[mode] };
+}
+
+/** Reads a `get_remote_method` reply. */
+export function parseClassicOutOfHomeAccess(
+  fields: Record<string, string>,
+): boolean {
+  return fields.method === REMOTE_METHOD_POLLING;
 }
 
 /** Turns `current`, the `get_remote_method` reply, and `enabled` into the
@@ -99,10 +123,29 @@ export function encodeClassicEnergyPrice(
   };
 }
 
+/** Reads a `get_price` reply: `null` unless it carries both `price_int` and
+ * `price_dec`. */
+export function parseClassicEnergyPrice(
+  fields: Record<string, string>,
+): number | null {
+  const whole = parseInteger(fields.price_int);
+  const hundredths = parseInteger(fields.price_dec);
+  return whole === null || hundredths === null
+    ? null
+    : (whole * 100 + hundredths) / 100;
+}
+
 export function encodeClassicEnergyTarget(
   target: number,
 ): Record<string, string> {
   return { target: String(target) };
+}
+
+/** Reads a `get_target` reply: `null` when it carries no `target`. */
+export function parseClassicEnergyTarget(
+  fields: Record<string, string>,
+): number | null {
+  return parseInteger(fields.target);
 }
 
 export function encodeClassicName(name: string): Record<string, string> {
@@ -117,6 +160,26 @@ export function encodeClassicGroup(group: DeviceGroup): Record<string, string> {
   return { grp_name: group.name, en_grp: flag(group.enabled) };
 }
 
+/** Reads the name, icon and group from a `basic_info` reply, leaving out each
+ * one the reply does not carry. The name and the group's name arrive
+ * form-encoded. */
+export function parseClassicMetadata(
+  fields: Record<string, string>,
+): DeviceMetadata {
+  return {
+    name:
+      fields.name === undefined ? undefined : decodeClassicText(fields.name),
+    icon: fields.icon,
+    group:
+      fields.en_grp === undefined
+        ? undefined
+        : {
+            name: decodeClassicText(fields.grp_name ?? ""),
+            enabled: fields.en_grp === "1",
+          },
+  };
+}
+
 export function encodeClassicTerminalKey(key: string): Record<string, string> {
   return { key };
 }
@@ -129,4 +192,13 @@ export function encodeClassicTerminalScope(
 
 function flag(on: boolean): string {
   return on ? "1" : "0";
+}
+
+function parseFlag(value: string | undefined): boolean | null {
+  return value === undefined ? null : value === "1";
+}
+
+function parseInteger(value: string | undefined): number | null {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isNaN(parsed) ? null : parsed;
 }

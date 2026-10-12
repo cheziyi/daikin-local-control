@@ -69,8 +69,10 @@ function dsiotClient(transport: MockDaikinTransport): DsiotDaikinClient {
 
 describe("DsiotDaikinClient", () => {
   describe("getState", () => {
-    it("posts a read of the indoor status and parses it into a DaikinState", async () => {
-      const transport = adapter(read(INDOOR_STATUS));
+    it("posts a read of the indoor and outdoor status and parses it into a DaikinState", async () => {
+      const transport = adapter(
+        read(INDOOR_STATUS, { "dgc_status.e_1003.e_3002.p_44": "01" }),
+      );
 
       expect(await dsiotClient(transport).getState()).toEqual({
         power: false,
@@ -81,12 +83,16 @@ describe("DsiotDaikinClient", () => {
         swingMode: "vertical",
         verticalPosition: "swing",
         horizontalPosition: "stop",
+        specialModes: ["powerful"],
       });
       expect(transport.sent).toStrictEqual([
         {
           method: "POST",
           path: MULTIREQ,
-          jsonBody: buildDsiotMultireqGet([DSIOT_TARGETS.indoorStatus]),
+          jsonBody: buildDsiotMultireqGet([
+            DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
+          ]),
         },
       ]);
     });
@@ -150,6 +156,26 @@ describe("DsiotDaikinClient", () => {
           { path: modeLeaf("p_09"), value: "0A00" },
         ]),
       );
+    });
+  });
+
+  describe("getDeviceInfo", () => {
+    it("reads the adapter info", async () => {
+      const transport = adapter(
+        read({ "adp_i.mac": "A408EACC91D4", "adp_i.ver": "1_14_88" }),
+      );
+
+      expect(await dsiotClient(transport).getDeviceInfo()).toEqual({
+        macAddress: "A4:08:EA:CC:91:D4",
+        firmwareVersion: "1.14.88",
+      });
+      expect(transport.sent).toStrictEqual([
+        {
+          method: "POST",
+          path: MULTIREQ,
+          jsonBody: buildDsiotMultireqGet([DSIOT_TARGETS.adapterInfo]),
+        },
+      ]);
     });
   });
 

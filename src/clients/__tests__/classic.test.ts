@@ -58,6 +58,7 @@ describe("ClassicDaikinClient", () => {
         swingMode: "vertical",
         verticalPosition: null,
         horizontalPosition: null,
+        specialModes: [],
       });
       expect(transport.sent).toStrictEqual([
         { method: "GET", path: GET_CONTROL_INFO },
@@ -201,6 +202,20 @@ describe("ClassicDaikinClient", () => {
     });
   });
 
+  describe("getDeviceInfo", () => {
+    it("reads basic_info into a DaikinDeviceInfo", async () => {
+      const transport = adapter({
+        [BASIC_INFO]: "ret=OK,type=aircon,ver=1_2_51,mac=A408EACC91D4",
+      });
+
+      expect(await classicClient(transport).getDeviceInfo()).toEqual({
+        macAddress: "A4:08:EA:CC:91:D4",
+        firmwareVersion: "1.2.51",
+      });
+      expect(pathsSentTo(transport)).toEqual([BASIC_INFO]);
+    });
+  });
+
   describe("getSensors", () => {
     it("reads get_sensor_info into DaikinSensors", async () => {
       const transport = adapter({
@@ -287,6 +302,81 @@ describe("ClassicDaikinClient", () => {
         expect(transport.sent).toEqual([{ method: "GET", path, query }]);
       },
     );
+
+    it.each<
+      [
+        string,
+        (client: ClassicDaikinClient) => Promise<unknown>,
+        string,
+        string,
+        unknown,
+      ]
+    >([
+      [
+        "getLed",
+        (client) => client.getLed(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,led=1",
+        true,
+      ],
+      [
+        "getHolidayMode",
+        (client) => client.getHolidayMode(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,en_hol=0",
+        false,
+      ],
+      [
+        "getOutOfHomeAccess",
+        (client) => client.getOutOfHomeAccess(),
+        "/common/get_remote_method",
+        "ret=OK,method=polling,notice_ip_int=3600,notice_sync_int=60",
+        true,
+      ],
+      [
+        "getEnergyPrice",
+        (client) => client.getEnergyPrice(),
+        "/aircon/get_price",
+        "ret=OK,price_int=27,price_dec=5",
+        27.05,
+      ],
+      [
+        "getEnergyTarget",
+        (client) => client.getEnergyTarget(),
+        "/aircon/get_target",
+        "ret=OK,target=120",
+        120,
+      ],
+      [
+        "getMetadata",
+        (client) => client.getMetadata(),
+        BASIC_INFO,
+        "ret=OK,type=aircon,name=Living%20Room,icon=5,grp_name=Upstairs,en_grp=1",
+        {
+          name: "Living Room",
+          icon: "5",
+          group: { name: "Upstairs", enabled: true },
+        },
+      ],
+    ])(
+      "%s sends one GET to its endpoint and reads the reply",
+      async (_method, call, path, body, expected) => {
+        const transport = adapter({ [path]: body });
+
+        expect(await call(classicClient(transport))).toEqual(expected);
+        expect(transport.sent).toEqual([{ method: "GET", path }]);
+      },
+    );
+
+    it("getLed reads basic_info again on each call", async () => {
+      const transport = adapter({ [BASIC_INFO]: "ret=OK,type=aircon,led=1" });
+      const client = classicClient(transport);
+
+      await client.getLed();
+      await client.getLed();
+
+      expect(pathsSentTo(transport)).toEqual([BASIC_INFO, BASIC_INFO]);
+    });
 
     it("unregisterTerminal unregisters this terminal's own uuid by default", async () => {
       const transport = adapter({ "/common/unregister_terminal": "ret=OK" });

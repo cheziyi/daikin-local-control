@@ -1,14 +1,16 @@
-import type {
-  DaikinControl,
-  DaikinSensors,
-  DaikinState,
-  FanSpeed,
-  HorizontalPosition,
-  HumiditySetting,
-  OperatingMode,
-  SwingMode,
-  TargetHumidity,
-  VerticalPosition,
+import {
+  type DaikinControl,
+  type DaikinSensors,
+  type DaikinState,
+  type FanSpeed,
+  type HorizontalPosition,
+  type HumiditySetting,
+  type OperatingMode,
+  SPECIAL_MODES,
+  type SpecialMode,
+  type SwingMode,
+  type TargetHumidity,
+  type VerticalPosition,
 } from "../../models/state.js";
 import { takesClassicDirection, takesClassicHumidity } from "./capabilities.js";
 
@@ -123,6 +125,13 @@ const HUMIDITY_SETTINGS_BY_CODE: Record<string, HumiditySetting> =
     ]),
   );
 
+// `adv` holds one code for each special mode that is on, separated by `/`.
+const SPECIAL_MODE_ADV_CODES: Record<SpecialMode, string> = {
+  powerful: "2",
+  econo: "12",
+  streamer: "13",
+};
+
 // Fan mode keeps no setpoint memory, and dehumidify runs the fan on auto only.
 const NO_SETPOINT = "--";
 const DEHUMIDIFY_FAN_SPEED = "A";
@@ -131,7 +140,8 @@ const NO_LOUVER = "-";
 
 /** Turns a `get_control_info` reply into a `DaikinState`. A `mode` or `f_rate`
  * outside the model reads as `auto`, an `f_dir` outside it as `off`, and an
- * `f_dir_ud` or `f_dir_lr` outside it as `null`. */
+ * `f_dir_ud` or `f_dir_lr` outside it as `null`. A code in `adv` outside
+ * `SpecialMode` is left out. */
 export function parseClassicState(fields: Record<string, string>): DaikinState {
   return {
     power: fields.pow === "1",
@@ -143,6 +153,7 @@ export function parseClassicState(fields: Record<string, string>): DaikinState {
     verticalPosition: VERTICAL_POSITIONS_BY_CODE[fields.f_dir_ud ?? ""] ?? null,
     horizontalPosition:
       HORIZONTAL_POSITIONS_BY_CODE[fields.f_dir_lr ?? ""] ?? null,
+    specialModes: parseSpecialModes(fields.adv),
   };
 }
 
@@ -267,6 +278,13 @@ export function applyClassicControl(
         : SWING_MODE_CODES[control.swingMode];
   }
   return next;
+}
+
+function parseSpecialModes(adv: string | undefined): SpecialMode[] {
+  const codes = (adv ?? "").split("/");
+  return SPECIAL_MODES.filter((mode) =>
+    codes.includes(SPECIAL_MODE_ADV_CODES[mode]),
+  );
 }
 
 function parseTargetHumidity(shum: string | undefined): TargetHumidity | null {

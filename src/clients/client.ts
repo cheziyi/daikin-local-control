@@ -1,4 +1,5 @@
 import type { DaikinCapabilities } from "../models/capabilities.js";
+import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DaikinControl,
   DaikinSensors,
@@ -11,6 +12,9 @@ import type {
  * `ClassicDaikinClient.registerTerminal`. Every method rejects with a
  * `DaikinError` when its request fails. */
 export interface DaikinClient {
+  /** The adapter's MAC address and firmware version. */
+  getDeviceInfo(): Promise<DaikinDeviceInfo>;
+
   /** The unit's supported features. */
   getCapabilities(): Promise<DaikinCapabilities>;
 
