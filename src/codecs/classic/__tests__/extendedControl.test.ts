@@ -12,8 +12,6 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
-  parseClassicEnergyPrice,
-  parseClassicEnergyTarget,
   parseClassicHolidayMode,
   parseClassicLed,
   parseClassicMetadata,
@@ -224,29 +222,6 @@ describe("parseClassicOutOfHomeAccess", () => {
     expect(parseClassicOutOfHomeAccess({ method: "polling" })).toBe(true);
     expect(parseClassicOutOfHomeAccess({ method: "home only" })).toBe(false);
     expect(parseClassicOutOfHomeAccess({})).toBeNull();
-  });
-});
-
-describe("parseClassicEnergyPrice", () => {
-  it("adds price_dec to price_int as hundredths", () => {
-    expect(parseClassicEnergyPrice({ price_int: "27", price_dec: "5" })).toBe(
-      27.05,
-    );
-    expect(parseClassicEnergyPrice({ price_int: "0", price_dec: "30" })).toBe(
-      0.3,
-    );
-  });
-
-  it("reads a reply missing either field as null", () => {
-    expect(parseClassicEnergyPrice({ price_int: "27" })).toBeNull();
-    expect(parseClassicEnergyPrice({ price_dec: "5" })).toBeNull();
-  });
-});
-
-describe("parseClassicEnergyTarget", () => {
-  it("reads target as a number, and a reply without it as null", () => {
-    expect(parseClassicEnergyTarget({ target: "120" })).toBe(120);
-    expect(parseClassicEnergyTarget({})).toBeNull();
   });
 });
 

@@ -15,8 +15,6 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
-  parseClassicEnergyPrice,
-  parseClassicEnergyTarget,
   parseClassicHolidayMode,
   parseClassicLed,
   parseClassicMetadata,
@@ -65,9 +63,7 @@ const CLASSIC_ROUTES = {
   getSensorInfo: "/aircon/get_sensor_info",
   setSpecialMode: "/aircon/set_special_mode",
   setDemandControl: "/aircon/set_demand_control",
-  getPrice: "/aircon/get_price",
   setPrice: "/aircon/set_price",
-  getTarget: "/aircon/get_target",
   setTarget: "/aircon/set_target",
   setLed: "/common/set_led",
   setHoliday: "/common/set_holiday",
@@ -201,26 +197,12 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Electricity price per kWh (`get_price`): `null` when the adapter does not
-   * report it. */
-  async getEnergyPrice(): Promise<number | null> {
-    return parseClassicEnergyPrice(await this.command(CLASSIC_ROUTES.getPrice));
-  }
-
   /** Electricity price per kWh for the consumption estimates (`set_price`),
    * to two decimal places. */
   async setEnergyPrice(price: number): Promise<void> {
     await this.command(
       CLASSIC_ROUTES.setPrice,
       encodeClassicEnergyPrice(price),
-    );
-  }
-
-  /** Energy target for the "target" feature (`get_target`): `null` when the
-   * adapter does not report it. */
-  async getEnergyTarget(): Promise<number | null> {
-    return parseClassicEnergyTarget(
-      await this.command(CLASSIC_ROUTES.getTarget),
     );
   }
 

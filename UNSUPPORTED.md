@@ -17,7 +17,7 @@ To add one, pin down the request and reply first, then delete its row.
 | Classic schedule demand mode (`mode=1`) | The full format of the weekly table it needs (`moc`..`suc`, `<day><n>_en`/`_t`/`_p`). | `ClassicDaikinClient.command()` |
 | Classic special mode `spmode_kind=4` (heat plus) | Which units take it. | `ClassicDaikinClient.command()` |
 | Timers, weekly programs, schedule timers (`/aircon/get_timer`, `set_timer`, `get_program`, `set_program`, `get_scdltimer_info`, `get_scdltimer_body`, `set_scdltimer_info`, `set_scdltimer_body`) | Their parameters. | `ClassicDaikinClient.command()` |
-| Classic setting reads: `/aircon/get_demand_control`, `/common/get_holiday` | The reply fields. `getHolidayMode` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
+| Classic setting reads: `/aircon/get_demand_control`, `/aircon/get_price`, `/aircon/get_target`, `/common/get_holiday` | The reply fields. `getHolidayMode` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
 | Classic `method` in `/common/get_remote_method` | Whether the reply carries it. `getOutOfHomeAccess` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
 | Energy history: classic `/aircon/get_week_power`, `get_year_power`, `get_day_power_ex`, `get_week_power_ex`, `get_year_power_ex`, and DSIOT `adr_0100.history` | The unit of each value, and which day or month each position in a list stands for. | `ClassicDaikinClient.command()` |
 | Power draw: classic `mompow` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_A005.p_01` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |

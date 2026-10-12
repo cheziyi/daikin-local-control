@@ -257,7 +257,6 @@ Read a setting back with the matching `get` method:
 | Method | Resolves with |
 | --- | --- |
 | `getLed()`, `getHolidayMode()`, `getOutOfHomeAccess()` | `true` or `false`, or `null` when the adapter does not report it |
-| `getEnergyPrice()`, `getEnergyTarget()` | A number, or `null` when the adapter does not report it |
 | `getMetadata()` | `{ name, icon, group }`, without the fields the adapter does not report |
 
 [UNSUPPORTED.md](UNSUPPORTED.md) lists the endpoints without a typed method and

@@ -491,20 +491,6 @@ describe("ClassicDaikinClient", () => {
         true,
       ],
       [
-        "getEnergyPrice",
-        (client) => client.getEnergyPrice(),
-        "/aircon/get_price",
-        "ret=OK,price_int=27,price_dec=5",
-        27.05,
-      ],
-      [
-        "getEnergyTarget",
-        (client) => client.getEnergyTarget(),
-        "/aircon/get_target",
-        "ret=OK,target=120",
-        120,
-      ],
-      [
         "getMetadata",
         (client) => client.getMetadata(),
         BASIC_INFO,

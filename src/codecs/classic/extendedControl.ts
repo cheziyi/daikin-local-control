@@ -126,29 +126,10 @@ export function encodeClassicEnergyPrice(
   };
 }
 
-/** Reads a `get_price` reply: `null` unless it carries both `price_int` and
- * `price_dec`. */
-export function parseClassicEnergyPrice(
-  fields: Record<string, string>,
-): number | null {
-  const whole = parseInteger(fields.price_int);
-  const hundredths = parseInteger(fields.price_dec);
-  return whole === null || hundredths === null
-    ? null
-    : (whole * 100 + hundredths) / 100;
-}
-
 export function encodeClassicEnergyTarget(
   target: number,
 ): Record<string, string> {
   return { target: String(target) };
-}
-
-/** Reads a `get_target` reply: `null` when it carries no `target`. */
-export function parseClassicEnergyTarget(
-  fields: Record<string, string>,
-): number | null {
-  return parseInteger(fields.target);
 }
 
 export function encodeClassicName(name: string): Record<string, string> {
@@ -199,9 +180,4 @@ function flag(on: boolean): string {
 
 function parseFlag(value: string | undefined): boolean | null {
   return value === undefined ? null : value === "1";
-}
-
-function parseInteger(value: string | undefined): number | null {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isNaN(parsed) ? null : parsed;
 }
