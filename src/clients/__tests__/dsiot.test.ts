@@ -17,12 +17,15 @@ const MULTIREQ = "/dsiot/multireq";
 
 interface Node {
   pn: string;
+  pt?: number;
   pv?: string;
   pch?: Node[];
   md?: Record<string, string | number>;
 }
 
-type Leaf = string | { pv: string; md: Record<string, string | number> };
+type Leaf =
+  | string
+  | { pv: string; pt?: number; md?: Record<string, string | number> };
 
 // Builds a reply's tree from dotted path -> pv (or { pv, md }).
 function tree(leaves: Record<string, Leaf>): Node | undefined {
@@ -204,7 +207,7 @@ describe("DsiotDaikinClient", () => {
   });
 
   describe("getCapabilities", () => {
-    it("reads the adapter info and the indoor status, with its metadata", async () => {
+    it("reads the adapter info and the indoor and outdoor status, with their metadata", async () => {
       const transport = adapter(
         read(
           { "adp_i.reg": "sg", "adp_i.kind": "4" },
@@ -212,6 +215,7 @@ describe("DsiotDaikinClient", () => {
             ...INDOOR_STATUS,
             [modeLeaf("p_02")]: { pv: "3000", md: { mi: "2400", mx: "3800" } },
           },
+          { "dgc_status.e_1003.e_3002.p_44": { pv: "00", pt: 2 } },
         ),
       );
 
@@ -224,9 +228,11 @@ describe("DsiotDaikinClient", () => {
           jsonBody: buildDsiotMultireqGet([
             DSIOT_TARGETS.adapterInfo,
             DSIOT_TARGETS.indoorStatus,
+            DSIOT_TARGETS.outdoorStatus,
           ]),
         },
       ]);
+      expect(capabilities.specialModes).toEqual(["powerful"]);
       expect(capabilities.targetTemperaturesInC.cool).toEqual({
         min: 18,
         max: 28,

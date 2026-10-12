@@ -9,6 +9,8 @@ import {
   HUMIDITY_SETTINGS,
   OPERATING_MODES,
   type OperatingMode,
+  SPECIAL_MODES,
+  type SpecialMode,
   SWING_MODES,
   type SwingMode,
   type TargetHumidity,
@@ -16,6 +18,13 @@ import {
 } from "../../models/state.js";
 
 const CAPABILITY_VERSIONS = ["0", "1", "2", "3"];
+// `en_spmode` sets one bit for each special mode the unit takes. Bit 8 is a
+// mode outside `SpecialMode`.
+const SPECIAL_MODE_BITS: Record<SpecialMode, number> = {
+  powerful: 1,
+  econo: 2,
+  streamer: 4,
+};
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "cool",
   "dehumidify",
@@ -100,12 +109,19 @@ export function parseClassicCapabilities(
       fan: null,
     },
     targetHumidities: targetHumidities(fields, modern, offeredModes),
+    specialModes: specialModes(fields.en_spmode),
     specialOutlet: cpv === "3" && fields.airoutlet_pv === "0",
     energyMonitoring: fields.elec === "1",
     demandControl: fields.adp_kind === "4" && fields.dmnd === "1",
     scheduleTimer: ["1", "2"].includes(fields.en_scdltmr ?? ""),
     model: fields.model,
   };
+}
+
+// A unit that reports no `en_spmode` lists none.
+function specialModes(enSpmode: string | undefined): SpecialMode[] {
+  const bits = Number.parseInt(enSpmode ?? "", 10);
+  return SPECIAL_MODES.filter((mode) => (bits & SPECIAL_MODE_BITS[mode]) !== 0);
 }
 
 function present(fields: Record<string, string>, key: string): boolean {

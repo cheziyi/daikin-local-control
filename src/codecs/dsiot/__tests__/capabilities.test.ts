@@ -59,10 +59,33 @@ describe("parseDsiotCapabilities", () => {
         heat: [],
         fan: [],
       },
+      specialModes: [],
       specialOutlet: false,
       energyMonitoring: false,
       demandControl: false,
       scheduleTimer: false,
+    });
+  });
+
+  describe("specialModes", () => {
+    it("lists each mode whose leaf has pt 2", () => {
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          "dgc_status.e_1003.e_3002.p_44.pt": "2",
+          "dgc_status.e_1002.e_3003.p_24.pt": "3",
+          "dgc_status.e_1002.e_3003.p_20.pt": "2",
+        }).specialModes,
+      ).toEqual(["powerful", "streamer"]);
+    });
+
+    it("lists no mode whose leaf came back without a pt", () => {
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          "dgc_status.e_1002.e_3003.p_24": "00",
+        }).specialModes,
+      ).toEqual([]);
     });
   });
 

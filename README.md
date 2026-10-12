@@ -176,6 +176,7 @@ values this unit takes under the plural of the state field each one limits:
 | `fanSpeeds`, `swingModes`, `verticalPositions`, `horizontalPositions` | The values the unit takes, empty when it has no such control |
 | `targetTemperaturesInC` | For each mode, `{ min, max, step }` in °C, or `null` where the mode has no setpoint |
 | `targetHumidities` | For each mode, the humidity settings it takes, empty where it takes none |
+| `specialModes` | The special modes the unit takes, empty when it reports none |
 | `specialOutlet`, `energyMonitoring`, `demandControl`, `scheduleTimer` | `true` when the unit has the feature |
 | `model` | The adapter's own code for the unit's model |
 

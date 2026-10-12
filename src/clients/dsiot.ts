@@ -58,6 +58,7 @@ export class DsiotDaikinClient implements DaikinClient {
       await this.multireqGet([
         DSIOT_TARGETS.adapterInfo,
         DSIOT_TARGETS.indoorStatus,
+        DSIOT_TARGETS.outdoorStatus,
       ]),
     );
   }

@@ -32,8 +32,9 @@ export const DSIOT_PATHS = {
   energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
 } as const;
 
-// Each leaf holds `01` while its mode is on. Powerful is on the outdoor edge.
-const SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
+/** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
+ * edge. */
+export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
   powerful: "dgc_status.e_1003.e_3002.p_44",
   econo: "dgc_status.e_1002.e_3003.p_24",
   streamer: "dgc_status.e_1002.e_3003.p_20",
@@ -503,7 +504,7 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
     verticalPosition: parseVerticalPosition(values, paths.vertical),
     horizontalPosition: parseHorizontalPosition(values[paths.horizontal]),
     specialModes: SPECIAL_MODES.filter(
-      (mode) => values[SPECIAL_MODE_PATHS[mode]] === SPECIAL_MODE_ON,
+      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === SPECIAL_MODE_ON,
     ),
   };
 }

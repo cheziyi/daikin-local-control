@@ -414,6 +414,25 @@ describe("parseClassicCapabilities", () => {
     });
   });
 
+  describe("specialModes", () => {
+    it.each([
+      ["1", ["powerful"]],
+      ["2", ["econo"]],
+      ["4", ["streamer"]],
+      ["7", ["powerful", "econo", "streamer"]],
+      ["8", []],
+      ["0", []],
+    ] as const)("reads en_spmode=%s as %j", (en_spmode, specialModes) => {
+      expect(
+        parseClassicCapabilities({ ...BASE, en_spmode }).specialModes,
+      ).toEqual(specialModes);
+    });
+
+    it("lists none for a unit that reports no en_spmode", () => {
+      expect(parseClassicCapabilities(BASE).specialModes).toEqual([]);
+    });
+  });
+
   describe("specialOutlet", () => {
     it("is set at cpv 3 when airoutlet_pv is 0", () => {
       expect(

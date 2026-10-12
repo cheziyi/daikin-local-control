@@ -2,6 +2,7 @@ import type {
   FanSpeed,
   HorizontalPosition,
   OperatingMode,
+  SpecialMode,
   SwingMode,
   TargetHumidity,
   VerticalPosition,
@@ -41,6 +42,8 @@ export interface DaikinCapabilities {
   /** Humidity settings per mode; empty where the mode has none or the unit does
    * not offer it. A percentage is listed for no unit: see UNSUPPORTED.md. */
   targetHumidities: Readonly<Record<OperatingMode, readonly TargetHumidity[]>>;
+  /** Special modes the unit takes; empty when it reports none. */
+  specialModes: readonly SpecialMode[];
   /** Whether the unit has the special air outlet, which heat can swing
    * through. That swing is not modelled: see UNSUPPORTED.md. */
   specialOutlet: boolean;
