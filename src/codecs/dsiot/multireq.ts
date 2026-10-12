@@ -24,6 +24,7 @@ const EDGE_ROOT = "/dsiot/edge";
  * reads. */
 export const DSIOT_TARGETS = {
   adapterInfo: `${EDGE_ROOT}.adp_i?filter=pv`,
+  adapterSettings: `${EDGE_ROOT}.adp_d?filter=pv`,
   indoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.indoor}.dgc_status?filter=pv,pt,md`,
   outdoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.outdoor}.dgc_status?filter=pv,pt,md`,
 } as const;

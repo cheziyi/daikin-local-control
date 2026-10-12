@@ -9,9 +9,10 @@ import {
 } from "../multireq.js";
 
 describe("DSIOT_TARGETS", () => {
-  it("addresses whole trees: values for adp_i, and values, types and metadata for each dgc_status", () => {
+  it("addresses whole trees: values for adp_i and adp_d, and values, types and metadata for each dgc_status", () => {
     expect(DSIOT_TARGETS).toEqual({
       adapterInfo: "/dsiot/edge.adp_i?filter=pv",
+      adapterSettings: "/dsiot/edge.adp_d?filter=pv",
       indoorStatus: "/dsiot/edge/adr_0100.dgc_status?filter=pv,pt,md",
       outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md",
     });

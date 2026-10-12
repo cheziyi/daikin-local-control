@@ -95,8 +95,8 @@ const device: DaikinDevice = { host: "192.168.1.50", protocol: "classic" };
 const client = createDaikinClient(device, { terminalUuid: savedUuid });
 ```
 
-A device written by hand has no `macAddress` or `firmwareVersion`: read them
-from the adapter with `await client.getDeviceInfo()`.
+A device written by hand has no `name`, `macAddress` or `firmwareVersion`: read
+them from the adapter with `await client.getDeviceInfo()`.
 
 Set `protocol` to `dsiot` for a BRP084 and to `classic` for every other
 adapter. A device without flags is an adapter that requires neither

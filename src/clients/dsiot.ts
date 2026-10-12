@@ -58,7 +58,10 @@ export class DsiotDaikinClient implements DaikinClient {
 
   async getDeviceInfo(): Promise<DaikinDeviceInfo> {
     return parseDsiotDeviceInfo(
-      await this.multireqGet([DSIOT_TARGETS.adapterInfo]),
+      await this.multireqGet([
+        DSIOT_TARGETS.adapterInfo,
+        DSIOT_TARGETS.adapterSettings,
+      ]),
     );
   }
 

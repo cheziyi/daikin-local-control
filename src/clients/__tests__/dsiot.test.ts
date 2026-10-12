@@ -303,12 +303,16 @@ describe("DsiotDaikinClient", () => {
   });
 
   describe("getDeviceInfo", () => {
-    it("reads the adapter info", async () => {
+    it("reads the adapter info and the adapter settings", async () => {
       const transport = adapter(
-        read({ "adp_i.mac": "A408EACC91D4", "adp_i.ver": "1_14_88" }),
+        read(
+          { "adp_i.mac": "A408EACC91D4", "adp_i.ver": "1_14_88" },
+          { "adp_d.name": "Bedroom" },
+        ),
       );
 
       expect(await dsiotClient(transport).getDeviceInfo()).toEqual({
+        name: "Bedroom",
         macAddress: "A4:08:EA:CC:91:D4",
         firmwareVersion: "1.14.88",
       });
@@ -316,7 +320,10 @@ describe("DsiotDaikinClient", () => {
         {
           method: "POST",
           path: MULTIREQ,
-          jsonBody: buildDsiotMultireqGet([DSIOT_TARGETS.adapterInfo]),
+          jsonBody: buildDsiotMultireqGet([
+            DSIOT_TARGETS.adapterInfo,
+            DSIOT_TARGETS.adapterSettings,
+          ]),
         },
       ]);
     });

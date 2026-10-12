@@ -9,6 +9,9 @@ export type DaikinProtocol = (typeof DAIKIN_PROTOCOLS)[number];
  * each `DaikinDevice`, and `DaikinClient.getDeviceInfo` reads it for a device
  * written by hand. */
 export interface DaikinDeviceInfo {
+  /** The name the adapter was given, such as `Bedroom`. Left out when the
+   * adapter reports none. */
+  name?: string;
   /** In pairs joined by colons, in the letter case the adapter sends, such as
    * `A4:08:EA:CC:91:D4`. Left out when the adapter reports none. */
   macAddress?: string;
@@ -25,7 +28,6 @@ export interface DaikinDevice extends DaikinDeviceInfo {
   /** Address, with `:port` when the adapter announces one. */
   host: string;
   protocol: DaikinProtocol;
-  name?: string;
   /** The adapter answers a terminal uuid only once it is registered with the
    * KEY on the adapter's label (`registerTerminal`). Classic only. */
   requiresRegistration?: boolean;

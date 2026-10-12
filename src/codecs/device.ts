@@ -16,10 +16,6 @@ export function parseDevice(
   return {
     host: basicInfo.api_port ? `${host}:${basicInfo.api_port}` : host,
     protocol,
-    name:
-      basicInfo.name === undefined
-        ? undefined
-        : decodeClassicText(basicInfo.name),
     // Only classic adapters register terminals.
     requiresRegistration: secure && protocol === "classic",
     // Only a Marvell adapter (adp_kind=3) in secure mode speaks HTTPS; every
@@ -33,11 +29,16 @@ export function parseDevice(
   };
 }
 
-/** Reads what a `basic_info` reply says to identify the adapter. */
+/** Reads what a `basic_info` reply says to identify the adapter. The name
+ * arrives form-encoded. */
 export function parseDeviceInfo(
   basicInfo: Record<string, string>,
 ): DaikinDeviceInfo {
   return {
+    name:
+      basicInfo.name === undefined
+        ? undefined
+        : decodeClassicText(basicInfo.name),
     macAddress: decodeMacAddress(basicInfo.mac),
     firmwareVersion: decodeFirmwareVersion(basicInfo.ver),
   };
