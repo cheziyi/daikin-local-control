@@ -1,9 +1,12 @@
 # daikin-local-control
 
 [![npm version](https://img.shields.io/npm/v/daikin-local-control)](https://www.npmjs.com/package/daikin-local-control)
+[![npm downloads](https://img.shields.io/npm/dm/daikin-local-control)](https://www.npmjs.com/package/daikin-local-control)
 [![CI](https://github.com/cheziyi/daikin-local-control/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cheziyi/daikin-local-control/actions/workflows/ci.yml?query=branch%3Amain)
 [![Node version](https://img.shields.io/node/v/daikin-local-control)](package.json)
+[![Types](https://img.shields.io/npm/types/daikin-local-control)](package.json)
 [![License](https://img.shields.io/npm/l/daikin-local-control)](LICENSE)
+[![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 
 A TypeScript and Node.js client for controlling Daikin air conditioners **over
 the local network** (LAN), through their Wi-Fi adapters and with no cloud
