@@ -143,8 +143,8 @@ const savedUuid =
 adapters only answer terminals they have registered. Each adapter's KEY is
 printed on its label, next to the SSID (also in the operation manual). Register
 your uuid with it once. Until you do, every call fails with HTTP 401/403.
-Each uuid is registered separately, so an adapter already set up in the DAIKIN
-Mobile Controller app still needs registering here.
+Each uuid is registered separately, so an adapter already set up in a Daikin
+app still needs registering here.
 
 ```ts
 import { ClassicDaikinClient } from "daikin-local-control";
@@ -164,8 +164,8 @@ Some of these adapters also switch to HTTPS (`device.usesHttps`); see
 
 **Child lock code (when `device.requiresLocalPassword` is `true`).** The protocol
 calls it the local password (`lpw`). It is the 4-digit code set under Child lock
-in the DAIKIN Mobile Controller app. It is **not** printed on the label, and it
-is not your Wi-Fi or Out-of-Home password. Pass it as `localPassword` to
+in the Daikin app the adapter was set up with. It is **not** printed on the
+label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPassword` to
 `createDaikinClient`. If it's forgotten, the adapter has to be reset.
 
 ### State and capabilities
@@ -516,9 +516,8 @@ used, so it is **not valid for every Daikin region or app**.
 | Daikin Airbase | Australia | BRP15B61, on a ducted unit | `AirbaseDaikinClient` |
 | ONECTA, once Daikin Online Controller | Europe | BRP069A and BRP069B series | `ClassicDaikinClient` |
 
-The DAIKIN Mobile Controller app is published by Daikin Thailand and may be
-available in other countries too; if your local Daikin site points you to it,
-this package should apply.
+Each app may be available in more countries than the table lists: if your
+local Daikin site points you to one of the three, this package should apply.
 
 Three limits apply, and [UNSUPPORTED.md](UNSUPPORTED.md) says what is not known
 about each:
