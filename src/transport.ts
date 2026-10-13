@@ -72,8 +72,9 @@ export interface DaikinTransportOptions {
   /** HTTPS (a Marvell adapter in secure mode). */
   usesHttps?: boolean;
   /** The terminal uuid, sent as `X-Daikin-uuid` on every call: 32 lowercase
-   * hexadecimal digits, a UUID without its dashes. */
-  terminalUuid: string;
+   * hexadecimal digits, a UUID without its dashes. Without one the header is
+   * left out, as an Airbase adapter takes it. */
+  terminalUuid?: string;
   authentication?: DaikinAuthentication;
   /** How long, in milliseconds, to wait for each of the connection, the
    * reply's headers and the reply's body before `send` throws a
@@ -110,7 +111,10 @@ export class DaikinTransport {
    * `DaikinTransportOptions.terminalUuid` describes. */
   constructor(private readonly options: DaikinTransportOptions) {
     // Before the Client, so a uuid that throws leaves no connection open.
-    this.terminalUuidHeaders = encodeTerminalUuid(options.terminalUuid);
+    this.terminalUuidHeaders =
+      options.terminalUuid === undefined
+        ? {}
+        : encodeTerminalUuid(options.terminalUuid);
 
     const scheme = options.usesHttps ? "https" : "http";
     this.origin = `${scheme}://${options.host.replace(/\/+$/, "")}`;

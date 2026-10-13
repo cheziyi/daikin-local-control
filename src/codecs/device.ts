@@ -1,12 +1,28 @@
 import type { DaikinDevice, DaikinDeviceInfo } from "../models/device.js";
 import { decodeClassicText } from "./classic/keyValue.js";
-import { DSIOT_ADAPTER_TYPE } from "./dsiot/tables.js";
+import { CLASSIC_ADAPTER_TYPE } from "./classic/tables.js";
+import {
+  DSIOT_ADAPTER_TYPE,
+  DSIOT_AIR_CLEANER_DEVICES,
+} from "./dsiot/tables.js";
 
 const MARVELL_ADP_KIND = "3";
 
+/** Whether a `basic_info` reply comes from the adapter of an air conditioner:
+ * `type=aircon`, or `type=GPF` with a `cdev` that is not an air cleaner's. The
+ * adapter of another appliance answers the discovery probe as well, such as
+ * an air cleaner (`type=cleaner`) or a water heater (`type=Water Heater`). */
+export function isAirConditioner(basicInfo: Record<string, string>): boolean {
+  if (basicInfo.type === DSIOT_ADAPTER_TYPE) {
+    return !DSIOT_AIR_CLEANER_DEVICES.includes(basicInfo.cdev ?? "");
+  }
+  return basicInfo.type === CLASSIC_ADAPTER_TYPE;
+}
+
 /** Turns a `basic_info` reply into a `DaikinDevice`: `type=GPF` marks a DSIOT
  * adapter, and `api_port`, when present, is the HTTP port and is appended to
- * `host`, the address the reply came from. */
+ * `host`, the address the reply came from. It reads any reply as an air
+ * conditioner's: check the reply with `isAirConditioner` first. */
 export function parseDevice(
   host: string,
   basicInfo: Record<string, string>,

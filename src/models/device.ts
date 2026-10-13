@@ -1,8 +1,9 @@
-export const DAIKIN_PROTOCOLS = ["classic", "dsiot"] as const;
+export const DAIKIN_PROTOCOLS = ["classic", "dsiot", "airbase"] as const;
 
 /** The wire protocol an adapter speaks, and the only difference between
  * adapters that takes a separate `DaikinClient` implementation: `classic` for
- * a CGI adapter such as the BRP069 or BRP072, `dsiot` for a BRP084. */
+ * a CGI adapter such as the BRP069 or BRP072, `dsiot` for a BRP084, and
+ * `airbase` for the BRP15B61 of a ducted unit. */
 export type DaikinProtocol = (typeof DAIKIN_PROTOCOLS)[number];
 
 /** What an adapter reports to identify itself. `discoverDevices` fills it into

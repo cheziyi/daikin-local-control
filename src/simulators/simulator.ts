@@ -9,8 +9,8 @@ import type {
   SpecialMode,
 } from "../models/state.js";
 
-// What the classic and the DSIOT simulator share: the HTTP server, and the
-// reply to a discovery probe, which both adapters send in the same form.
+// What the simulators share: the HTTP server, and the reply to a discovery
+// probe, which every adapter sends in the same form.
 
 const DISCOVERY_PROBE = "DAIKIN_UDP/common/basic_info";
 const DISCOVERY_PORT = 30050;
@@ -28,7 +28,7 @@ export interface DaikinSimulatorRequest {
   body: string;
 }
 
-/** What `startClassicSimulator` and `startDsiotSimulator` both resolve with. */
+/** What every simulator resolves with. */
 export interface DaikinSimulator {
   /** `<address>:<port>`, as `DaikinDevice.host` takes it: `127.0.0.1`, unless
    * the simulator was started at another `address`, and a port that was free
@@ -59,9 +59,10 @@ export interface DaikinSimulatorTemperatures {
   max: number;
 }
 
-/** What a simulated unit has, where both protocols can say it. Anything else
- * about a unit is set in the adapter's own terms: `modelInfo` on a classic
- * simulator, and `leaves` on a DSIOT one. */
+/** What a simulated unit has, where the classic and the DSIOT protocol can
+ * both say it. Anything else about a unit is set in the adapter's own terms:
+ * `modelInfo` on a classic simulator, and `leaves` on a DSIOT one. An Airbase
+ * simulator takes an `AirbaseSimulatorUnit` instead. */
 export interface DaikinSimulatorUnit {
   /** A unit that only cools offers dehumidify, cool and fan. Defaults to
    * false: a heat pump, which offers auto and heat as well. */
@@ -83,10 +84,9 @@ export interface DaikinSimulatorUnit {
   heatTemperaturesInC?: DaikinSimulatorTemperatures;
 }
 
-/** The options `startClassicSimulator` and `startDsiotSimulator` both take.
- * A simulator applies `deviceInfo`, `state` and `sensors` after the fields
- * given in the adapter's own terms, so they replace a field given both
- * ways. */
+/** The options every simulator takes. A simulator applies `deviceInfo`,
+ * `state` and `sensors` after the fields given in the adapter's own terms, so
+ * they replace a field given both ways. */
 export interface StartSimulatorOptions {
   /** The adapter's name, MAC address and firmware version, as
    * `getDeviceInfo` reads them back. A field left out keeps its default.
@@ -98,7 +98,8 @@ export interface StartSimulatorOptions {
   state?: Partial<DaikinState>;
   /** What the unit's sensors read at the start: see
    * `DaikinSimulator.setSensors`. Defaults to 26 °C and 55 % indoors, and
-   * 30 °C outdoors. */
+   * 30 °C outdoors. An Airbase simulator reports no humidity unless it is
+   * given one. */
   sensors?: Partial<DaikinSensors>;
   /** How long, in milliseconds, the adapter takes to answer a request. It
    * answers one request at a time, in the order they arrive, so a request
@@ -117,7 +118,7 @@ export interface StartSimulatorOptions {
 }
 
 /** What `startSimulator` resolves with: the part of a `DaikinSimulator` that
- * is the same for both protocols. */
+ * is the same for every protocol. */
 export type SimulatorServer = Pick<
   DaikinSimulator,
   "host" | "requests" | "stop"

@@ -1,4 +1,5 @@
 import {
+  CLASSIC_ADAPTER_TYPE,
   CLASSIC_COOLING_ONLY_TYPE,
   CLASSIC_FAN_SPEED_CODES,
   CLASSIC_HORIZONTAL_POSITION_CODES,
@@ -33,7 +34,7 @@ import {
 // DESIGN.md#simulators.
 
 const DEFAULT_BASIC_INFO: Record<string, string> = {
-  type: "aircon",
+  type: CLASSIC_ADAPTER_TYPE,
   reg: "th",
   ver: "1_2_51",
   name: "Simulator",

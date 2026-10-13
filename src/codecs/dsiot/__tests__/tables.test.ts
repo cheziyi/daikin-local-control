@@ -19,6 +19,7 @@ describe("the DSIOT tables", () => {
         outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md",
       },
       DSIOT_ADAPTER_TYPE: "GPF",
+      DSIOT_AIR_CLEANER_DEVICES: ["1D", "CJ"],
       DSIOT_ADAPTER_PATHS: {
         name: "adp_d.name",
         macAddress: "adp_i.mac",

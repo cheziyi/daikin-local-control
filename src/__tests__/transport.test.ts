@@ -74,6 +74,16 @@ describe("DaikinTransport", () => {
       );
     });
 
+    it("sends no X-Daikin-uuid without a uuid", async () => {
+      const adapter = await startMockAdapter("ret=OK");
+      const transport = new DaikinTransport({ host: adapter.host });
+      transports.push(transport);
+
+      await transport.send(BASIC_INFO);
+
+      expect(adapter.received[0]?.headers).not.toHaveProperty("x-daikin-uuid");
+    });
+
     it("percent-encodes each query key and value, a space as %20", async () => {
       const adapter = await startMockAdapter("ret=OK");
 

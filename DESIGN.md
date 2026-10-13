@@ -53,6 +53,46 @@ the read. A `DaikinState` holds the current mode's values alone: it has neither
 the values a classic adapter remembers for the other modes nor the `md` of a
 DSIOT leaf, so the client would still need the reply.
 
+## Discovery
+
+`discoverDevices` sends its probes from the first free UDP port from 30000 to
+30050. An adapter answers the port a probe came from, so a reply reaches the
+call that sent the probe.
+
+Rejected: port 30000 alone, bound with `reuseAddr`.
+
+- Two calls at the same time both bound the port, and each reply reached one
+  of the two sockets alone. One call resolved with every adapter and the other
+  with none, and neither rejected.
+
+`discoverDevices` asks each adapter that replies as a classic one, over HTTP,
+whether it is an Airbase adapter: `isAirbaseAdapter` takes HTTP 404 at
+`/common/basic_info` with `ret=OK` at `/skyfi/common/basic_info` for one.
+
+Rejected: the protocol from the reply alone.
+
+- An Airbase adapter reports `type=aircon` as a classic adapter does, and no
+  field of the reply is known to differ. Discovery reported it as `classic`,
+  and it answered HTTP 404 to every request of the client built from that.
+
+Rejected: asking in `createDaikinClient`, for a device written by hand as
+well.
+
+- `createDaikinClient` returns a client at once and sends nothing. Asking
+  there would make it asynchronous for every caller, to settle what a caller
+  who writes a device by hand already knows.
+
+`discoverDevices` resolves with the adapters of air conditioners alone:
+`isAirConditioner` passes a reply whose `type` is `aircon`, or `GPF` with a
+`cdev` that is not an air cleaner's.
+
+Rejected: a device for every adapter that answers.
+
+- The adapter of an air cleaner, a water heater, a floor heater or a
+  circulator answers the probe as well. `parseDevice` read each as a classic
+  air conditioner, a `DaikinDevice` had nothing to tell them apart by, and no
+  method of the client built from one worked.
+
 ## Capabilities
 
 `DaikinCapabilities` lists what a unit accepts in the vocabulary of `DaikinState`:
@@ -154,8 +194,8 @@ Rejected: one list for the whole unit.
 
 ## Simulators
 
-`startClassicSimulator` and `startDsiotSimulator` each start an adapter as a
-server. A simulator shares the codecs' tables, `src/codecs/*/tables.ts`, and
+`startClassicSimulator`, `startDsiotSimulator` and `startAirbaseSimulator`
+each start an adapter as a server. A simulator shares the codecs' tables, `src/codecs/*/tables.ts`, and
 none of their functions. A table holds what an adapter calls a thing: its
 field and leaf names, and the code for each value. A function does something
 with it: a codec parses a reply and builds a request, and a simulator answers
@@ -198,8 +238,11 @@ reply.
 - A caller had to know the adapter's encodings to start a unit in a state: a
   DSIOT setpoint of 24 °C is the leaf value `3000`.
 
-A simulator takes what the unit has as a `DaikinSimulatorUnit`, which says it
-in terms both protocols have flags for: `coolingOnly`, `swing`, `fan`.
+A classic or a DSIOT simulator takes what the unit has as a
+`DaikinSimulatorUnit`, which says it in terms both protocols have flags for:
+`coolingOnly`, `swing`, `fan`. An Airbase simulator takes an
+`AirbaseSimulatorUnit` of its own: an Airbase unit has zones and airside, and
+neither a cooling-only kind nor a special mode.
 
 Rejected: taking a `DaikinCapabilities`.
 

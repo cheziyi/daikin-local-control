@@ -1,12 +1,14 @@
 {
   "name": "daikin-local-control",
   "version": "0.0.0",
-  "description": "Unofficial Node.js and TypeScript client for controlling Daikin air conditioners over the local network (LAN), with no cloud. Supports classic (BRP069, BRP072) and DSIOT (BRP084) Wi-Fi adapters.",
+  "description": "Unofficial Node.js and TypeScript client for controlling Daikin air conditioners over the local network (LAN), with no cloud. Supports classic (BRP069, BRP072), DSIOT (BRP084) and Airbase (BRP15B61) Wi-Fi adapters.",
   "keywords": [
     "daikin",
     "daikin-ac",
     "daikin-api",
     "daikin-mobile-controller",
+    "daikin-airbase",
+    "onecta",
     "air-conditioner",
     "air-conditioning",
     "aircon",
@@ -19,6 +21,7 @@
     "brp072a42",
     "brp072c42",
     "brp084",
+    "brp15b61",
     "dsiot",
     "skyair",
     "home-automation",
@@ -31,7 +34,8 @@
     "taiwan",
     "philippines",
     "australia",
-    "new-zealand"
+    "new-zealand",
+    "europe"
   ],
   "license": "MIT",
   "homepage": "https://github.com/cheziyi/daikin-local-control#readme",

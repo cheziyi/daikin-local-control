@@ -40,6 +40,10 @@ export const DSIOT_TARGETS = {
 /** `type` in a discovery reply from a DSIOT adapter. */
 export const DSIOT_ADAPTER_TYPE = "GPF";
 
+/** `cdev` in a discovery reply from a DSIOT adapter whose unit is an air
+ * cleaner. */
+export const DSIOT_AIR_CLEANER_DEVICES: readonly string[] = ["1D", "CJ"];
+
 /** Dotted paths into the `adp_i` and `adp_d` trees. The MAC address and the
  * version hold the value a classic adapter sends in `basic_info`, and the
  * name is plain text, where a classic adapter form-encodes it. */
