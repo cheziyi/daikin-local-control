@@ -213,7 +213,11 @@ describe("a simulator", () => {
       try {
         await expect(
           startClassicSimulator({ answersDiscovery: true }),
-        ).rejects.toMatchObject({ code: "EADDRINUSE" });
+        ).rejects.toMatchObject({
+          // Windows refuses a socket that sets `reuseAddr` a port held by one
+          // that does not, and calls that EACCES.
+          code: process.platform === "win32" ? "EACCES" : "EADDRINUSE",
+        });
       } finally {
         await release();
       }
