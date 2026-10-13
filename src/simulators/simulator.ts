@@ -110,9 +110,9 @@ export interface StartSimulatorOptions {
   address?: string;
   /** Whether the adapter answers the discovery probe, so `discoverDevices`
    * finds it at `host`. Defaults to false. Any number of simulators answer
-   * at once, in one process or several. Starting one rejects with the
-   * socket's error only while a program that is not a simulator holds UDP
-   * port 30050. */
+   * at once, in one process or several, and `discoverDevices` finds each at
+   * its own port. Starting one rejects with the socket's error only while a
+   * program that is not a simulator holds UDP port 30050. */
   answersDiscovery?: boolean;
 }
 

@@ -365,7 +365,11 @@ as a `verticalPosition` on a unit without fixed louver positions.
 | Make the adapter slow | Pass `replyDelayInMs`: it answers one request at a time, so a second request waits for the first |
 | Make the adapter unreachable | `await simulator.stop()` |
 | Reach it from another machine | Pass `address`, an address of this machine other than the default `127.0.0.1` |
-| Have `discoverDevices()` find it | Pass `answersDiscovery: true`. Start as many as you like, in one process or several: `discoverDevices()` finds them all |
+| Have `discoverDevices()` find it | Pass `answersDiscovery: true` |
+
+Start as many discoverable simulators as you like, in one process or several:
+`discoverDevices()` resolves with one device for each, at `127.0.0.1` and the
+simulator's own port.
 
 `discoverDevices()` broadcasts the probe, so it also finds the real adapters
 on the LAN, and it needs a network to broadcast on. Only a program that is
