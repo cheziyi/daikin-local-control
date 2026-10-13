@@ -111,15 +111,17 @@ for you.
 An adapter can need up to three things. Discovery tells you which ones apply
 (`device.requiresRegistration`, `device.requiresLocalPassword`).
 
-**Terminal uuid (always).** It identifies your app to the adapter. Any random
-UUID works. Generate it **once**, store it, and reuse it on every run: an
-adapter that requires registration remembers it, so a new uuid means registering
-again.
+**Terminal uuid (always).** It identifies your app to the adapter. Pass 32
+lowercase hexadecimal digits, a UUID without its dashes: `createDaikinClient()`
+throws an `Error` for any other form, and sends the uuid as given. Generate it
+**once**, store it, and reuse it on every run: an adapter that requires
+registration remembers it, so a new uuid means registering again.
 
 ```ts
 import { randomUUID } from "node:crypto";
 
-const savedUuid = loadFromConfig() ?? saveToConfig(randomUUID());
+const savedUuid =
+  loadFromConfig() ?? saveToConfig(randomUUID().replaceAll("-", ""));
 ```
 
 **KEY (when `device.requiresRegistration` is `true`).** These
@@ -282,9 +284,11 @@ A client method that fails rejects with a `DaikinError`; branch on
 | 504 | The request timed out, or the TLS handshake failed |
 | Any other | The adapter's own HTTP status, such as 403 |
 
-Two failures are not a `DaikinError`: `discoverDevices()` rejects with the
-socket's error, and `multireqUpdate()` throws an `Error` for a path that names
-a resource without a leaf, such as `dgc_status`.
+Three failures are not a `DaikinError`: `discoverDevices()` rejects with the
+socket's error, `createDaikinClient()` throws an `Error` for a
+[terminal uuid](#credentials) in the wrong form, and `multireqUpdate()` throws
+an `Error` for a path that names a resource without a leaf, such as
+`dgc_status`.
 
 Only a `DaikinConnectionError` is retried, up to five times by default.
 [DESIGN.md](DESIGN.md#retries) says why.

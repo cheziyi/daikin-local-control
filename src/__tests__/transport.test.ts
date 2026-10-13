@@ -27,7 +27,7 @@ function transportTo(
   },
 ): DaikinTransport {
   const transport = new DaikinTransport({
-    terminalUuid: "terminal-uuid",
+    terminalUuid: "0123456789abcdef0123456789abcdef",
     ...options,
   });
   transports.push(transport);
@@ -37,6 +37,15 @@ function transportTo(
 const BASIC_INFO: DaikinRequest = { method: "GET", path: "/common/basic_info" };
 
 describe("DaikinTransport", () => {
+  describe("constructor", () => {
+    it("throws an Error for a terminal uuid that is not 32 lowercase hexadecimal digits", () => {
+      expect(
+        () =>
+          new DaikinTransport({ host: "192.0.2.1", terminalUuid: "my-app" }),
+      ).toThrow("The terminal uuid must be 32 lowercase hexadecimal digits");
+    });
+  });
+
   describe("send", () => {
     it("sends the method and path, and returns the reply's body", async () => {
       const adapter = await startMockAdapter("ret=OK,pow=1");
@@ -52,14 +61,17 @@ describe("DaikinTransport", () => {
       ]);
     });
 
-    it("sends the uuid as X-Daikin-uuid, without its dashes", async () => {
+    it("sends the uuid as X-Daikin-uuid", async () => {
       const adapter = await startMockAdapter("ret=OK");
 
-      await transportTo({ host: adapter.host, terminalUuid: "1234-abcd" }).send(
-        BASIC_INFO,
-      );
+      await transportTo({
+        host: adapter.host,
+        terminalUuid: "fedcba9876543210fedcba9876543210",
+      }).send(BASIC_INFO);
 
-      expect(adapter.received[0]?.headers["x-daikin-uuid"]).toBe("1234abcd");
+      expect(adapter.received[0]?.headers["x-daikin-uuid"]).toBe(
+        "fedcba9876543210fedcba9876543210",
+      );
     });
 
     it("percent-encodes each query key and value, a space as %20", async () => {

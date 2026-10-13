@@ -30,6 +30,7 @@ To add one, pin down the request and reply first, then delete its row.
 | Classic notifications, clock and account: `/common/get_notify`, `set_notify`, `set_push_notice`, `set_timezone`, `notify_date_time`, `set_account` | Their parameters. | `ClassicDaikinClient.command()` |
 | Classic network: `/common/get_network_setting`, `set_network_setting`, `start_wifi_scan`, `get_wifi_scan_result`, `start_wifi_connection`, `permit_wifi_connection`, `set_lpw` | Their parameters. | `ClassicDaikinClient.command()` |
 | Classic firmware update: a POST to `/dkac/system/fwupdate` | The format of the upload. | Not reachable |
+| A terminal uuid in another form: with dashes, uppercase, or not 32 hexadecimal digits | Whether the adapter accepts it. `createDaikinClient` throws an `Error` for one. | Not reachable |
 
 ## Not modelled
 
