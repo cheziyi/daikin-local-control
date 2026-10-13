@@ -97,14 +97,40 @@ describe("discoverDevices", () => {
     ]);
   });
 
-  it("keeps the first reply from an address that replies again", async () => {
+  it("keeps the first reply from a host that replies again", async () => {
     const discovery = discoverDevices();
     socket.receive("192.168.1.50", "ret=OK,type=aircon,name=First");
     socket.receive("192.168.1.50", "ret=OK,type=aircon,name=Second");
+    socket.receive(
+      "192.168.1.51",
+      "ret=OK,type=aircon,name=Third,api_port=8080",
+    );
+    socket.receive(
+      "192.168.1.51",
+      "ret=OK,type=aircon,name=Fourth,api_port=8080",
+    );
     await vi.runAllTimersAsync();
 
     expect(await discovery).toMatchObject([
       { host: "192.168.1.50", name: "First" },
+      { host: "192.168.1.51:8080", name: "Third" },
+    ]);
+  });
+
+  it("keeps each adapter at one address that announces a port of its own", async () => {
+    const discovery = discoverDevices();
+    socket.receive(
+      "127.0.0.1",
+      "ret=OK,type=aircon,name=Bedroom,api_port=18101",
+    );
+    socket.receive("127.0.0.1", "ret=OK,type=GPF,name=Study,api_port=18102");
+    socket.receive("127.0.0.1", "ret=OK,type=aircon,name=Hall");
+    await vi.runAllTimersAsync();
+
+    expect(await discovery).toMatchObject([
+      { host: "127.0.0.1:18101", protocol: "classic", name: "Bedroom" },
+      { host: "127.0.0.1:18102", protocol: "dsiot", name: "Study" },
+      { host: "127.0.0.1", protocol: "classic", name: "Hall" },
     ]);
   });
 

@@ -3,10 +3,9 @@ import { DaikinError } from "../../../error.js";
 import {
   buildDsiotMultireqGet,
   buildDsiotMultireqUpdate,
-  DSIOT_EDGES,
-  DSIOT_TARGETS,
   parseDsiotMultireqReply,
 } from "../multireq.js";
+import { DSIOT_EDGES, DSIOT_TARGETS } from "../tables.js";
 
 describe("DSIOT_TARGETS", () => {
   it("addresses whole trees: values for adp_i and adp_d, and values, types and metadata for each dgc_status", () => {

@@ -130,8 +130,11 @@ Rejected: positions as the numbers 0 to 25, typed `number`, with
 ## Special modes
 
 `DaikinState.specialModes` lists the special modes that are on, and `getState`
-reads it on both protocols. `DaikinControl` leaves it out, so `setState` is
-never handed a field it cannot write: UNSUPPORTED.md says what is not known.
+reads it on both protocols. `DaikinControl` leaves it out: `setSpecialMode`
+turns one mode on or off, with a request of its own on both protocols. A
+classic adapter takes it at `/aircon/set_special_mode`, beside
+`set_control_info`, and a DSIOT adapter takes one leaf, on the outdoor edge
+for powerful where every leaf `setState` writes is on the indoor edge.
 
 Rejected: a `getSpecialModes` on `ClassicDaikinClient`, beside `setSpecialMode`.
 
@@ -148,3 +151,111 @@ Rejected: one list for the whole unit.
 
 - Econo is not known to be taken in fan mode, so the one list offered it in a
   mode where UNSUPPORTED.md lists it as unknown.
+
+## Simulators
+
+`startClassicSimulator` and `startDsiotSimulator` each start an adapter as a
+server. A simulator shares the codecs' tables, `src/codecs/*/tables.ts`, and
+none of their functions. A table holds what an adapter calls a thing: its
+field and leaf names, and the code for each value. A function does something
+with it: a codec parses a reply and builds a request, and a simulator answers
+the request, holds what it was sent, and builds the reply.
+
+Rejected: a simulator that builds its replies with the codecs' functions.
+
+- A simulator built from a codec agrees with it by construction. A codec that
+  reads a field wrongly would meet a simulator that writes it wrongly the same
+  way, and the test of one against the other would pass.
+
+Rejected: a simulator with tables of its own, sharing nothing with the codecs.
+
+- Every code was written twice, in two files that had to be kept alike, and a
+  caller setting a field of a simulator by hand had no table to read it from.
+- The second writing caught a wrong code only where the simulator encoded a
+  value itself. `tables.test.ts` writes every entry out again, and catches
+  one wherever it is used.
+
+`package.json` exports the simulators as `daikin-local-control/simulators`,
+an entry of their own beside the package root.
+
+Rejected: exporting them from the package root.
+
+- A caller's production code imports the root. With the simulators in it, that
+  import loads two servers the code never starts, and a bundler has to work
+  out that it can drop them.
+
+A simulator holds its state in the adapter's terms, `controlInfo.stemp` on a
+classic simulator and a leaf's `pv` by its address on a DSIOT one, and takes
+it in the package's models: a `DaikinState`, a `DaikinSensors` and a
+`DaikinDeviceInfo`. It turns a model into the adapter's fields with functions
+of its own, in `src/simulators/`, so a client that reads the state back
+checks the codec that parses it against a second writing of the same
+encoding.
+
+Rejected: options in the adapter's terms alone, a record of strings for each
+reply.
+
+- A caller had to know the adapter's encodings to start a unit in a state: a
+  DSIOT setpoint of 24 °C is the leaf value `3000`.
+
+A simulator takes what the unit has as a `DaikinSimulatorUnit`, which says it
+in terms both protocols have flags for: `coolingOnly`, `swing`, `fan`.
+
+Rejected: taking a `DaikinCapabilities`.
+
+- Most values of it are ones no adapter reports. Fan speeds of `auto`,
+  `level1` and `level3` have no `frate_steps`, and a DSIOT adapter reports
+  every fan speed or none, so the simulator would throw for most of what the
+  type allows.
+
+A simulator answers HTTP 501 to a request whose answer from an adapter is not
+known, such as a path it does not serve.
+
+Rejected: answering such a request the way an adapter plausibly would, with
+HTTP 404 or `ret=PARAM NG`.
+
+- A caller's test would then pass or fail on an answer no adapter is known to
+  give. No adapter is known to answer 501, so a caller cannot take it for an
+  adapter's reply.
+
+A simulator answers one request at a time, and a request that arrives
+meanwhile waits for its turn: an adapter makes concurrent requests wait.
+`replyDelayInMs` makes the wait long enough for a test to see. Whether an
+adapter also drops a connection while it is busy is not known, so a simulator
+never does.
+
+A simulator answers the discovery probe only when started with
+`answersDiscovery`.
+
+Rejected: answering it always.
+
+- An adapter answers on UDP port 30050, a fixed port, so a simulator that
+  always bound it could not start beside another program that holds it, in a
+  test that never discovers anything.
+
+Each simulator is at one `address` of the machine, `127.0.0.1` unless it is
+given another. It answers the probe from that address, and the simulators
+share port 30050: each hears the probe on a socket bound to every address,
+and answers from a second socket bound to its own.
+
+Rejected: one socket for each simulator, bound to port 30050 of its own
+address.
+
+- The probe is a broadcast to `255.255.255.255`, and a socket bound to one
+  address receives none of it: two simulators bound that way answered no
+  probe.
+
+Rejected: one socket bound to every address, answering from it.
+
+- The machine then picks the address a reply leaves from, its address on the
+  LAN, so `discoverDevices` reports the simulator there, and the simulator
+  has to listen for HTTP on the LAN where a test needs loopback alone.
+
+`discoverDevices` keeps one device for each `host`, the address a reply came
+from with the `api_port` it announces, so it finds every simulator on a
+machine: they answer from one address and announce a port each.
+
+Rejected: one device for each address.
+
+- Simulators on one machine share its addresses, so a caller could have as
+  many discovered as the machine has addresses, two on a laptop.

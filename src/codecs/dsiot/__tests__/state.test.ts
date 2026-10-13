@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TargetHumidity } from "../../../models/state.js";
 import {
   applyDsiotControl,
-  DSIOT_PATHS,
+  buildDsiotSpecialModeUpdate,
   decodeDsiotBoolean,
   decodeDsiotFanSpeed,
   decodeDsiotIndoorHumidity,
@@ -19,6 +19,7 @@ import {
   parseDsiotSensors,
   parseDsiotState,
 } from "../state.js";
+import { DSIOT_PATHS } from "../tables.js";
 import {
   INDOOR_STATUS,
   louverMask,
@@ -890,4 +891,41 @@ describe("parseDsiotSensors", () => {
       outdoorTemperatureInC: null,
     });
   });
+});
+
+describe("buildDsiotSpecialModeUpdate", () => {
+  const body = (
+    to: string,
+    entity: string,
+    group: string,
+    leaf: string,
+    pv: string,
+  ) => ({
+    requests: [
+      {
+        op: 3,
+        to,
+        pc: {
+          pn: "dgc_status",
+          pch: [{ pn: entity, pch: [{ pn: group, pch: [{ pn: leaf, pv }] }] }],
+        },
+      },
+    ],
+  });
+  const INDOOR = "/dsiot/edge/adr_0100.dgc_status";
+  const OUTDOOR = "/dsiot/edge/adr_0200.dgc_status";
+
+  it.each([
+    ["powerful", true, body(OUTDOOR, "e_1003", "e_3002", "p_44", "01")],
+    ["powerful", false, body(OUTDOOR, "e_1003", "e_3002", "p_44", "00")],
+    ["econo", true, body(INDOOR, "e_1002", "e_3003", "p_24", "01")],
+    ["econo", false, body(INDOOR, "e_1002", "e_3003", "p_24", "00")],
+    ["streamer", true, body(INDOOR, "e_1002", "e_3003", "p_20", "01")],
+    ["streamer", false, body(INDOOR, "e_1002", "e_3003", "p_20", "00")],
+  ] as const)(
+    "writes %s as %s to its one leaf, on its unit's edge",
+    (mode, enabled, expected) => {
+      expect(buildDsiotSpecialModeUpdate(mode, enabled)).toEqual(expected);
+    },
+  );
 });

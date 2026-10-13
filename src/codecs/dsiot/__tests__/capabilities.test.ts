@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseDsiotCapabilities } from "../capabilities.js";
-import { DSIOT_PATHS } from "../state.js";
+import { DSIOT_PATHS } from "../tables.js";
 import {
   INDOOR_STATUS,
   louverMask,

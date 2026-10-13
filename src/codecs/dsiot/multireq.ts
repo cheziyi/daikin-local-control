@@ -1,33 +1,10 @@
 import { DaikinError } from "../../error.js";
+import { DSIOT_EDGE_ROOT, DSIOT_EDGES, DSIOT_OPERATIONS } from "./tables.js";
 
 // The DSIOT (BRP084, `type=GPF`) protocol speaks one endpoint, `/dsiot/multireq`,
 // carrying operations on property trees. A request addresses a resource (`to`);
 // a tree node has pn (name) / pt (type) / pch (children) / pv (value) / md
 // (metadata: mi min, mx max, st step).
-
-export const DSIOT_OPERATIONS = {
-  get: 2,
-  update: 3,
-  delete: 4,
-} as const;
-
-/** The indoor and the outdoor unit are separate edges on the adapter. */
-export const DSIOT_EDGES = {
-  indoor: "adr_0100",
-  outdoor: "adr_0200",
-} as const;
-
-const EDGE_ROOT = "/dsiot/edge";
-
-/** What a read fetches, as the `to` of a request: whole trees, never single
- * leaves. The status trees come with `pt`, which `parseDsiotCapabilities`
- * reads. */
-export const DSIOT_TARGETS = {
-  adapterInfo: `${EDGE_ROOT}.adp_i?filter=pv`,
-  adapterSettings: `${EDGE_ROOT}.adp_d?filter=pv`,
-  indoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.indoor}.dgc_status?filter=pv,pt,md`,
-  outdoorStatus: `${EDGE_ROOT}/${DSIOT_EDGES.outdoor}.dgc_status?filter=pv,pt,md`,
-} as const;
 
 interface PropertyNode {
   pn: string;
@@ -78,7 +55,7 @@ export function buildDsiotMultireqUpdate(
   return {
     requests: roots.map((pc) => ({
       op: DSIOT_OPERATIONS.update,
-      to: `${EDGE_ROOT}/${edge}.${pc.pn}`,
+      to: `${DSIOT_EDGE_ROOT}/${edge}.${pc.pn}`,
       pc,
     })),
   };

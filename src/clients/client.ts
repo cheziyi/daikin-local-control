@@ -5,6 +5,7 @@ import type {
   DaikinSensors,
   DaikinState,
   DaikinStateAndSensors,
+  SpecialMode,
 } from "../models/state.js";
 
 /** The controls every adapter offers, whatever its wire protocol or
@@ -27,6 +28,11 @@ export interface DaikinClient {
    * a reply to `getState` or `getStateAndSensors` younger than
    * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   setState(control: DaikinControl): Promise<void>;
+
+  /** Turn powerful, econo or streamer on or off, with a request of its own.
+   * `DaikinCapabilities.specialModes` lists the ones the unit takes in each
+   * mode, and the client sends any other as given. */
+  setSpecialMode(mode: SpecialMode, enabled: boolean): Promise<void>;
 
   /** Read-only temperature / humidity readings. */
   getSensors(): Promise<DaikinSensors>;

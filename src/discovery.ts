@@ -31,7 +31,8 @@ export interface DiscoverDevicesOptions {
  * datagram whose `ret` is not `OK`.
  *
  * It resolves once `timeoutInMs` has passed, never earlier, with one device
- * per replying address. It binds UDP port 30000, and rejects with the socket's
+ * for each `host` that replied: the address a reply came from, with the port
+ * the reply announces. It binds UDP port 30000, and rejects with the socket's
  * error when the socket fails. */
 export async function discoverDevices(
   options: DiscoverDevicesOptions = {},
@@ -58,14 +59,17 @@ export async function discoverDevices(
     });
 
     socket.on("message", (message, remote) => {
-      if (devices.has(remote.address)) {
-        return;
-      }
       const fields = parseClassicKeyValue(message.toString("utf8"));
       if (!isClassicOk(fields)) {
         return;
       }
-      devices.set(remote.address, parseDevice(remote.address, fields));
+      // An adapter answers each of the probes, so the first reply from a
+      // host is kept. Adapters at one address, as simulators on one machine
+      // are, differ by the port they announce.
+      const device = parseDevice(remote.address, fields);
+      if (!devices.has(device.host)) {
+        devices.set(device.host, device);
+      }
     });
 
     socket.bind(DISCOVERY_SEND_PORT, () => {

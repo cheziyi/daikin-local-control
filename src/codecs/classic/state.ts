@@ -13,17 +13,21 @@ import {
   type VerticalPosition,
 } from "../../models/state.js";
 import { takesClassicDirection, takesClassicHumidity } from "./capabilities.js";
+import {
+  CLASSIC_FAN_SPEED_CODES,
+  CLASSIC_HORIZONTAL_POSITION_CODES,
+  CLASSIC_HUMIDITY_SETTING_CODES,
+  CLASSIC_LOUVER_STOP,
+  CLASSIC_LOUVER_SWING,
+  CLASSIC_NO_SETPOINT,
+  CLASSIC_OPERATING_MODE_CODES,
+  CLASSIC_SPECIAL_MODE_ADV_CODES,
+  CLASSIC_SWING_MODE_CODES,
+  CLASSIC_VERTICAL_POSITION_CODES,
+} from "./tables.js";
 
 // Maps between `DaikinState` and the classic `control_info` wire fields, and reads
 // `DaikinSensors` from `get_sensor_info`.
-
-const OPERATING_MODE_CODES: Record<OperatingMode, string> = {
-  auto: "1",
-  dehumidify: "2",
-  cool: "3",
-  heat: "4",
-  fan: "6",
-};
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
   "0": "auto",
@@ -35,67 +39,23 @@ const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
   "6": "fan",
 };
 
-const FAN_SPEED_CODES: Record<FanSpeed, string> = {
-  auto: "A",
-  silent: "B",
-  level1: "3",
-  level2: "4",
-  level3: "5",
-  level4: "6",
-  level5: "7",
-};
-
 const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(
-  Object.entries(FAN_SPEED_CODES).map(([speed, code]) => [
+  Object.entries(CLASSIC_FAN_SPEED_CODES).map(([speed, code]) => [
     code,
     speed as FanSpeed,
   ]),
 );
 
-const SWING_MODE_CODES: Record<SwingMode, string> = {
-  off: "0",
-  vertical: "1",
-  horizontal: "2",
-  both: "3",
-};
-
 const SWING_MODES_BY_CODE: Record<string, SwingMode> = Object.fromEntries(
-  Object.entries(SWING_MODE_CODES).map(([swing, code]) => [
+  Object.entries(CLASSIC_SWING_MODE_CODES).map(([swing, code]) => [
     code,
     swing as SwingMode,
   ]),
 );
 
-// `f_dir_ud` and `f_dir_lr` carry a digit for stop and each fixed position, and
-// a letter for the rest.
-const LOUVER_STOP = "0";
-const LOUVER_SWING = "S";
-const VERTICAL_POSITION_CODES: Record<VerticalPosition, string> = {
-  stop: LOUVER_STOP,
-  position1: "1",
-  position2: "2",
-  position3: "3",
-  position4: "4",
-  position5: "5",
-  swing: LOUVER_SWING,
-  naturalWind: "N",
-  auto: "A",
-  floorWarming: "F",
-};
-const HORIZONTAL_POSITION_CODES: Record<HorizontalPosition, string> = {
-  stop: LOUVER_STOP,
-  position1: "1",
-  position2: "2",
-  position3: "3",
-  position4: "4",
-  position5: "5",
-  swing: LOUVER_SWING,
-  auto: "A",
-};
-
 const VERTICAL_POSITIONS_BY_CODE: Record<string, VerticalPosition> =
   Object.fromEntries(
-    Object.entries(VERTICAL_POSITION_CODES).map(([position, code]) => [
+    Object.entries(CLASSIC_VERTICAL_POSITION_CODES).map(([position, code]) => [
       code,
       position as VerticalPosition,
     ]),
@@ -103,38 +63,21 @@ const VERTICAL_POSITIONS_BY_CODE: Record<string, VerticalPosition> =
 
 const HORIZONTAL_POSITIONS_BY_CODE: Record<string, HorizontalPosition> =
   Object.fromEntries(
-    Object.entries(HORIZONTAL_POSITION_CODES).map(([position, code]) => [
-      code,
-      position as HorizontalPosition,
-    ]),
+    Object.entries(CLASSIC_HORIZONTAL_POSITION_CODES).map(
+      ([position, code]) => [code, position as HorizontalPosition],
+    ),
   );
-
-const HUMIDITY_SETTING_CODES: Record<HumiditySetting, string> = {
-  off: "0",
-  autoLow: "AUTO_L",
-  auto: "AUTO",
-  autoHigh: "AUTO_H",
-  continuous: "CONTINUE",
-};
 
 const HUMIDITY_SETTINGS_BY_CODE: Record<string, HumiditySetting> =
   Object.fromEntries(
-    Object.entries(HUMIDITY_SETTING_CODES).map(([setting, code]) => [
+    Object.entries(CLASSIC_HUMIDITY_SETTING_CODES).map(([setting, code]) => [
       code,
       setting as HumiditySetting,
     ]),
   );
 
-// `adv` holds one code for each special mode that is on, separated by `/`.
-const SPECIAL_MODE_ADV_CODES: Record<SpecialMode, string> = {
-  powerful: "2",
-  econo: "12",
-  streamer: "13",
-};
-
-// Fan mode keeps no setpoint memory, and dehumidify runs the fan on auto only.
-const NO_SETPOINT = "--";
-const DEHUMIDIFY_FAN_SPEED = "A";
+// Dehumidify runs the fan on auto only.
+const DEHUMIDIFY_FAN_SPEED = CLASSIC_FAN_SPEED_CODES.auto;
 // In `ndfd<mode>`, a louver the unit lacks.
 const NO_LOUVER = "-";
 
@@ -188,11 +131,11 @@ export function applyClassicControl(
   const currentMode =
     heldMode === undefined
       ? (current.mode ?? "")
-      : OPERATING_MODE_CODES[heldMode];
+      : CLASSIC_OPERATING_MODE_CODES[heldMode];
   const mode =
     control.mode === undefined
       ? currentMode
-      : OPERATING_MODE_CODES[control.mode];
+      : CLASSIC_OPERATING_MODE_CODES[control.mode];
   const modeChanged = mode !== currentMode;
   const remembered = (field: string, memoryPrefix: string) =>
     (modeChanged ? current[`${memoryPrefix}${mode}`] : undefined) ??
@@ -202,14 +145,14 @@ export function applyClassicControl(
   const power = control.power ?? current.pow === "1";
   const next: Record<string, string> = { pow: power ? "1" : "0", mode };
 
-  const setpointFrozen = mode === OPERATING_MODE_CODES.fan;
+  const setpointFrozen = mode === CLASSIC_OPERATING_MODE_CODES.fan;
   // Only a mode in the model has a `dt` and a `dh` memory.
   const hasMemory =
     !setpointFrozen && (control.mode !== undefined || heldMode !== undefined);
   next.stemp = setpointFrozen
-    ? NO_SETPOINT
+    ? CLASSIC_NO_SETPOINT
     : control.targetTemperatureInC != null &&
-        mode !== OPERATING_MODE_CODES.dehumidify
+        mode !== CLASSIC_OPERATING_MODE_CODES.dehumidify
       ? control.targetTemperatureInC.toFixed(1)
       : remembered("stemp", "dt");
   if (hasMemory) {
@@ -217,7 +160,7 @@ export function applyClassicControl(
   }
   if (takesClassicHumidity(capabilityFields)) {
     next.shum = setpointFrozen
-      ? NO_SETPOINT
+      ? CLASSIC_NO_SETPOINT
       : control.targetHumidity != null
         ? encodeTargetHumidity(control.targetHumidity)
         : remembered("shum", "dh");
@@ -227,55 +170,60 @@ export function applyClassicControl(
   }
 
   next.f_rate =
-    mode === OPERATING_MODE_CODES.dehumidify
+    mode === CLASSIC_OPERATING_MODE_CODES.dehumidify
       ? DEHUMIDIFY_FAN_SPEED
       : control.fanSpeed === undefined
         ? remembered("f_rate", "dfr")
-        : FAN_SPEED_CODES[control.fanSpeed];
+        : CLASSIC_FAN_SPEED_CODES[control.fanSpeed];
 
   if (capabilityFields.en_fdir2 === "1") {
     // `ndfd<mode>` holds the mode's `f_dir_ud` value, then its `f_dir_lr`
     // value. A value outside the model is sent back as it came.
     const louverMemory = modeChanged ? current[`ndfd${mode}`] : undefined;
     let vertical =
-      rememberedLouver(louverMemory, 0) || current.f_dir_ud || LOUVER_STOP;
+      rememberedLouver(louverMemory, 0) ||
+      current.f_dir_ud ||
+      CLASSIC_LOUVER_STOP;
     let horizontal =
-      rememberedLouver(louverMemory, 1) || current.f_dir_lr || LOUVER_STOP;
+      rememberedLouver(louverMemory, 1) ||
+      current.f_dir_lr ||
+      CLASSIC_LOUVER_STOP;
     if (control.swingMode !== undefined) {
       const swingsVertically =
         control.swingMode === "vertical" || control.swingMode === "both";
       const swingsHorizontally =
         control.swingMode === "horizontal" || control.swingMode === "both";
       vertical = swingsVertically
-        ? LOUVER_SWING
-        : vertical === LOUVER_SWING
-          ? LOUVER_STOP
+        ? CLASSIC_LOUVER_SWING
+        : vertical === CLASSIC_LOUVER_SWING
+          ? CLASSIC_LOUVER_STOP
           : vertical;
       horizontal = swingsHorizontally
-        ? LOUVER_SWING
-        : horizontal === LOUVER_SWING
-          ? LOUVER_STOP
+        ? CLASSIC_LOUVER_SWING
+        : horizontal === CLASSIC_LOUVER_SWING
+          ? CLASSIC_LOUVER_STOP
           : horizontal;
     }
     if (control.verticalPosition != null) {
-      vertical = VERTICAL_POSITION_CODES[control.verticalPosition];
+      vertical = CLASSIC_VERTICAL_POSITION_CODES[control.verticalPosition];
     }
     if (control.horizontalPosition != null) {
-      horizontal = HORIZONTAL_POSITION_CODES[control.horizontalPosition];
+      horizontal =
+        CLASSIC_HORIZONTAL_POSITION_CODES[control.horizontalPosition];
     }
     next.f_dir_ud = vertical;
     next.f_dir_lr = horizontal;
     if (takesDirection) {
       next.f_dir = String(
-        (vertical === LOUVER_SWING ? 1 : 0) |
-          (horizontal === LOUVER_SWING ? 2 : 0),
+        (vertical === CLASSIC_LOUVER_SWING ? 1 : 0) |
+          (horizontal === CLASSIC_LOUVER_SWING ? 2 : 0),
       );
     }
   } else if (takesDirection) {
     next.f_dir =
       control.swingMode === undefined
         ? remembered("f_dir", "dfd")
-        : SWING_MODE_CODES[control.swingMode];
+        : CLASSIC_SWING_MODE_CODES[control.swingMode];
   }
   return next;
 }
@@ -283,7 +231,7 @@ export function applyClassicControl(
 function parseSpecialModes(adv: string | undefined): SpecialMode[] {
   const codes = (adv ?? "").split("/");
   return SPECIAL_MODES.filter((mode) =>
-    codes.includes(SPECIAL_MODE_ADV_CODES[mode]),
+    codes.includes(CLASSIC_SPECIAL_MODE_ADV_CODES[mode]),
   );
 }
 
@@ -298,7 +246,7 @@ function parseTargetHumidity(shum: string | undefined): TargetHumidity | null {
 
 function encodeTargetHumidity(targetHumidity: TargetHumidity): string {
   return typeof targetHumidity === "string"
-    ? HUMIDITY_SETTING_CODES[targetHumidity]
+    ? CLASSIC_HUMIDITY_SETTING_CODES[targetHumidity]
     : String(targetHumidity.percent);
 }
 

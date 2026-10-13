@@ -39,12 +39,24 @@ changing the code it covers.
 | `src/models/` | The types a caller passes and receives, in the package's own terms | An adapter field name, code or value encoding |
 | `src/codecs/` | Every adapter field name, code and value encoding, as pure functions between adapter fields and models | I/O |
 | `src/clients/` | Which route to call, in what order, through which codec | An adapter field name, code or value encoding |
+| `src/simulators/` | An adapter of each protocol as a server: how it answers a request, and what it holds and remembers | An import from `src/clients/`, or from `src/codecs/` other than a `tables.ts` |
 
 - **Describe a capability in the vocabulary of the control it limits**:
   `fanSpeeds: FanSpeed[]`, not the adapter's flags.
   [DESIGN.md](DESIGN.md#capabilities) says why.
 - **Pass an adapter code through a model only when what it stands for is not
   known**, and list it in [UNSUPPORTED.md](UNSUPPORTED.md) under "Not modelled".
+- **Keep a table of names or codes in its codec's `tables.ts`**, and write
+  each entry out again in `tables.test.ts`. The codecs and the simulators both
+  read a table, so a wrong code is wrong on both sides and they still agree:
+  the test is the second writing that catches it.
+- **A simulator imports a codec's `tables.ts` and none of its functions.** A
+  test of a client against a simulator checks the codec's functions against
+  the simulator's only while the two share none:
+  [DESIGN.md](DESIGN.md#simulators) says why. Export a simulator from
+  `src/simulators/index.ts` alone, never from `src/index.ts`. Answer HTTP 501
+  where an adapter's answer is not known, and list any other answer that is
+  not known to be an adapter's in [UNSUPPORTED.md](UNSUPPORTED.md#simulators).
 
 ## Comments
 
