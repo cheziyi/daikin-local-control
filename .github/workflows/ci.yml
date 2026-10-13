@@ -8,18 +8,31 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       # Installs the pnpm in `packageManager` and the Node in `.nvmrc`, then runs `pnpm install`.
       - uses: pnpm/setup@v3
       - run: pnpm check
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Every Node release line that `engines` in package.json accepts and Node still maintains.
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v3
+        with:
+          runtime: node@${{ matrix.node }}
       - run: pnpm test
 
   publish:
     if: github.ref_type == 'tag'
-    needs: test
+    needs: [check, test]
     runs-on: ubuntu-latest
     permissions:
       # Setting any permission drops the rest, and actions/checkout needs this one.
