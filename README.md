@@ -365,12 +365,12 @@ as a `verticalPosition` on a unit without fixed louver positions.
 | Make the adapter slow | Pass `replyDelayInMs`: it answers one request at a time, so a second request waits for the first |
 | Make the adapter unreachable | `await simulator.stop()` |
 | Reach it from another machine | Pass `address`, an address of this machine other than the default `127.0.0.1` |
-| Have `discoverDevices()` find it | Pass `answersDiscovery: true`. Any number of simulators can be found at once |
+| Have `discoverDevices()` find it | Pass `answersDiscovery: true`. Start as many as you like, in one process or several: `discoverDevices()` finds them all |
 
 `discoverDevices()` broadcasts the probe, so it also finds the real adapters
-on the LAN, and it needs a network to broadcast on. The simulators share UDP
-port 30050 with one another; starting one rejects with the socket's error
-while another program holds that port.
+on the LAN, and it needs a network to broadcast on. Only a program that is
+not a simulator gets in the way: while one holds UDP port 30050, starting a
+simulator with `answersDiscovery` rejects with the socket's error.
 
 For anything the options above do not cover, such as humidity settings or
 fixed louver positions, set the adapter's own fields. A classic simulator
