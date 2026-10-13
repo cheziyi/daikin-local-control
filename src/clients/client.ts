@@ -31,7 +31,8 @@ export interface DaikinClient {
 
   /** Turn powerful, econo or streamer on or off, with a request of its own.
    * `DaikinCapabilities.specialModes` lists the ones the unit takes in each
-   * mode, and the client sends any other as given. */
+   * mode, and the client sends any other as given. An `AirbaseDaikinClient`
+   * rejects every one with status 501. */
   setSpecialMode(mode: SpecialMode, enabled: boolean): Promise<void>;
 
   /** Read-only temperature / humidity readings. */
@@ -39,7 +40,7 @@ export interface DaikinClient {
 
   /** What `getState` and `getSensors` resolve with, together. A DSIOT adapter
    * answers both in one request, where calling the two sends the same request
-   * twice. A classic adapter takes one request for each. */
+   * twice. A classic or an Airbase adapter takes one request for each. */
   getStateAndSensors(): Promise<DaikinStateAndSensors>;
 
   /** Close the connection to the adapter. */

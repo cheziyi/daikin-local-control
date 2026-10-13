@@ -1,3 +1,4 @@
+export * from "./airbase.js";
 export * from "./classic.js";
 export * from "./dsiot.js";
 export type {

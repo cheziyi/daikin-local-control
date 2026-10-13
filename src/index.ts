@@ -1,7 +1,12 @@
 export type { DaikinAuthentication } from "./authentication.js";
+export * from "./clients/airbase.js";
 export * from "./clients/classic.js";
 export * from "./clients/client.js";
 export * from "./clients/dsiot.js";
+export * from "./codecs/airbase/capabilities.js";
+export * from "./codecs/airbase/state.js";
+export * from "./codecs/airbase/tables.js";
+export * from "./codecs/airbase/zone.js";
 export * from "./codecs/classic/capabilities.js";
 export * from "./codecs/classic/extendedControl.js";
 export * from "./codecs/classic/keyValue.js";
@@ -21,4 +26,5 @@ export * from "./models/capabilities.js";
 export * from "./models/device.js";
 export * from "./models/extendedControl.js";
 export * from "./models/state.js";
+export * from "./models/zone.js";
 export * from "./transport.js";

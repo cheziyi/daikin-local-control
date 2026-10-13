@@ -3,6 +3,7 @@ import {
   type DaikinAuthentication,
   DsiotLocalPasswordAuthentication,
 } from "./authentication.js";
+import { AirbaseDaikinClient } from "./clients/airbase.js";
 import { ClassicDaikinClient } from "./clients/classic.js";
 import type { DaikinClient } from "./clients/client.js";
 import { DsiotDaikinClient } from "./clients/dsiot.js";
@@ -16,9 +17,11 @@ import {
 export interface CreateDaikinClientOptions {
   /** The terminal uuid, sent as `X-Daikin-uuid`: 32 lowercase hexadecimal
    * digits, a UUID without its dashes. Generate one and reuse it: an adapter
-   * that requires registration remembers it. */
+   * that requires registration remembers it. An Airbase adapter takes none,
+   * so it is neither checked nor sent to one. */
   terminalUuid: string;
-  /** The child lock code, for a device whose `requiresLocalPassword` is true. */
+  /** The child lock code, for a device whose `requiresLocalPassword` is true.
+   * It is not sent to an Airbase adapter, which takes none. */
   localPassword?: string;
   /** How long, in milliseconds, a request waits for the adapter. Defaults to
    * 10000: see `DaikinTransportOptions.timeoutInMs`. */
@@ -39,9 +42,10 @@ export interface CreateDaikinClientOptions {
 }
 
 /** Builds the client for a device: a `DsiotDaikinClient` when
- * `device.protocol` is `dsiot`, a `ClassicDaikinClient` otherwise. The client
- * sends over HTTPS when `device.usesHttps` is set, and sends the local
- * password when `options.localPassword` is given. It throws an `Error` when
+ * `device.protocol` is `dsiot`, an `AirbaseDaikinClient` when it is
+ * `airbase`, and a `ClassicDaikinClient` otherwise. The client sends over
+ * HTTPS when `device.usesHttps` is set, and sends the local password when
+ * `options.localPassword` is given. It throws an `Error` when
  * `options.terminalUuid` is not in the form
  * `CreateDaikinClientOptions.terminalUuid` describes. Call `close` on the
  * client when done with the unit. */
@@ -49,6 +53,18 @@ export function createDaikinClient(
   device: DaikinDevice,
   options: CreateDaikinClientOptions,
 ): DaikinClient {
+  if (device.protocol === "airbase") {
+    return new AirbaseDaikinClient(
+      new DaikinTransport({
+        host: device.host,
+        usesHttps: device.usesHttps,
+        timeoutInMs: options.timeoutInMs,
+        tls: options.tls,
+      }),
+      options.retry,
+      options.maxStateAgeForSetStateInMs,
+    );
+  }
   const transport = new DaikinTransport({
     host: device.host,
     usesHttps: device.usesHttps,

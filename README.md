@@ -10,20 +10,23 @@
 
 A TypeScript and Node.js client for controlling Daikin air conditioners **over
 the local network** (LAN), through their Wi-Fi adapters and with no cloud
-dependency. It implements the same local-control protocol as the **DAIKIN Mobile
-Controller** app, so it works with the units and Wi-Fi adapters that app
-supports — split / multi-split and SkyAir units fitted with adapters such as the
-BRP072A42, BRP072C42 and BRP084 — in the
-[markets where that app is used](#coverage--limitations).
+dependency. It implements the local-control protocols of the **DAIKIN Mobile
+Controller**, **Daikin Airbase** and **ONECTA** apps, so it works with the units
+and Wi-Fi adapters those apps support — split / multi-split, SkyAir and ducted
+units fitted with adapters such as the BRP072A42, BRP072C42, BRP084, BRP069 and
+BRP15B61 — in the [markets where those apps are used](#coverage--limitations).
 
-Daikin Wi-Fi adapters come in two generations, and the package has a client for
-each:
+Daikin Wi-Fi adapters speak one of three protocols, and the package has a
+client for each:
 
 - **`ClassicDaikinClient`** — classic adapters (BRP072A42, BRP072C42, BRP069).
   Full core control plus typed [extended controls](#extended-controls).
 - **`DsiotDaikinClient`** — newer DSIOT adapters (BRP084). Power, mode,
   setpoint, humidity, fan, swing, louver positions and special modes;
   [UNSUPPORTED.md](UNSUPPORTED.md) lists what is not mapped yet.
+- **`AirbaseDaikinClient`** — Airbase adapters (BRP15B61) on ducted units.
+  Power, mode, setpoint, fan and direction, plus [zones](#airbase), fan auto
+  and airside.
 
 You normally don't pick one yourself: `createDaikinClient` chooses the right
 client for each discovered device.
@@ -50,9 +53,9 @@ if (device === undefined) {
   throw new Error("No adapter answered");
 }
 
-// 2. Build the right client: createDaikinClient picks the classic or the DSIOT
-//    client from the device. Pass localPassword only when the adapter has a
-//    child lock code (see Credentials below).
+// 2. Build the right client: createDaikinClient picks the classic, the DSIOT
+//    or the Airbase client from the device. Pass localPassword only when the
+//    adapter has a child lock code (see Credentials below).
 const client = createDaikinClient(device, {
   terminalUuid: savedUuid, // generated once and stored (see Credentials below)
   localPassword: device.requiresLocalPassword ? "<child lock code>" : undefined,
@@ -76,17 +79,19 @@ await client.close();
 
 ### Discovery
 
-`discoverDevices()` resolves with one `DaikinDevice` for each adapter that
-answered, and with an empty array when none did. Each carries the adapter's
-`macAddress`, such as `A4:08:EA:CC:91:D4`, and `firmwareVersion`, such as
-`1.2.51`, when the adapter reports them: key a stored device on `macAddress`,
-because `host` changes when the adapter is given a new address.
+`discoverDevices()` resolves with one `DaikinDevice` for each air conditioner's
+adapter that answered, and with an empty array when none did. Each carries the
+adapter's `macAddress`, such as `A4:08:EA:CC:91:D4`, and `firmwareVersion`,
+such as `1.2.51`, when the adapter reports them: key a stored device on
+`macAddress`, because `host` changes when the adapter is given a new address.
 
 | It | So |
 | --- | --- |
 | Resolves after `timeoutInMs`, never earlier | Pass `discoverDevices({ timeoutInMs: 1000 })` to wait less than the default 3000 |
 | Broadcasts to `255.255.255.255` | It does not find an adapter on another subnet or VLAN |
-| Binds UDP port 30000 | It rejects with the socket's error when the socket fails |
+| Keeps the adapters of air conditioners alone | It leaves out the adapter of an air cleaner, a water heater or another appliance, which answers the same broadcast |
+| Asks each classic adapter over HTTP whether it is an Airbase adapter, which replies to the broadcast as a classic one does | It resolves later than `timeoutInMs` while an adapter is slow to answer, by 3000 ms at most for each request, and reports as `classic` one that does not answer |
+| Binds the first free UDP port from 30000 to 30050 | Calls made at the same time each get every reply. It rejects with the socket's error when none of the ports is free, or when the socket fails |
 
 Write the device by hand when you already know its address, or when discovery
 cannot reach it:
@@ -101,8 +106,20 @@ const client = createDaikinClient(device, { terminalUuid: savedUuid });
 A device written by hand has no `name`, `macAddress` or `firmwareVersion`: read
 them from the adapter with `await client.getDeviceInfo()`.
 
-Set `protocol` to `dsiot` for a BRP084 and to `classic` for every other
-adapter. A device without flags is an adapter that requires neither
+When you cannot tell whether an adapter is a classic or an Airbase one, ask it
+as discovery does:
+
+```ts
+import { DaikinTransport, isAirbaseAdapter } from "daikin-local-control";
+
+const transport = new DaikinTransport({ host: "192.168.1.50" });
+const protocol = (await isAirbaseAdapter(transport)) ? "airbase" : "classic";
+await transport.close();
+```
+
+Set `protocol` to `dsiot` for a BRP084, to `airbase` for a BRP15B61 and to
+`classic` for every other adapter: `createDaikinClient()` goes by it and asks
+the adapter nothing. A device without flags is an adapter that requires neither
 registration nor a child lock code. If yours requires either, set
 `requiresRegistration: true` / `requiresLocalPassword: true` and set up
 [credentials](#credentials) to match; add `usesHttps: true` if it also speaks
@@ -112,7 +129,9 @@ for you.
 ### Credentials
 
 An adapter can need up to three things. Discovery tells you which ones apply
-(`device.requiresRegistration`, `device.requiresLocalPassword`).
+(`device.requiresRegistration`, `device.requiresLocalPassword`). An Airbase
+adapter takes none of them: `createDaikinClient()` still takes a
+`terminalUuid`, and sends it nothing of the three.
 
 **Terminal uuid (always).** It identifies your app to the adapter. Pass 32
 lowercase hexadecimal digits, a UUID without its dashes: `createDaikinClient()`
@@ -206,11 +225,16 @@ given, whether or not the unit lists it.
 | `targetTemperatureInC` | In `fan` and `dehumidify` |
 | `targetHumidity` | In `fan` |
 | `fanSpeed` | In `dehumidify`, and on a DSIOT adapter in `cool` while a humidity setting is on: the fan runs on `auto` |
-| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position |
+| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position. On an Airbase adapter, always |
+
+An Airbase adapter also drops every `targetHumidity`, and a
+`targetTemperatureInC` in `fan` as well as in `dehumidify`.
 
 `setState()` takes no `specialModes`: turn one on or off with
 `setSpecialMode()`, which sends a request of its own. Check the mode against
 `getCapabilities().specialModes` first: the client sends any mode as given.
+An Airbase adapter has no request for one, so `AirbaseDaikinClient` rejects
+with a `DaikinError` whose `httpStatusCode` is 501.
 
 ```ts
 await client.setSpecialMode("powerful", true);
@@ -274,6 +298,43 @@ what is not known about each.
 `DsiotDaikinClient` has `reboot()` and the raw `multireqGet` / `multireqUpdate`
 hatches for any `dgc_status` leaf.
 
+### Airbase
+
+`AirbaseDaikinClient` adds the controls a ducted unit has. Narrow to the
+concrete class to reach them:
+
+```ts
+import { AirbaseDaikinClient } from "daikin-local-control";
+
+if (client instanceof AirbaseDaikinClient) {
+  const zones = await client.getZones(); // [{ name: "Living", enabled: true }, ...]
+  await client.setZone(1, true); // open the second zone
+
+  if ((await client.getFanAuto()) !== null) {
+    await client.setFanAuto(true);
+  }
+  if ((await client.getAirside()) !== null) {
+    await client.setAirside(true);
+  }
+
+  // Any other endpoint, by its path below /skyfi.
+  const holiday = await client.command("/common/get_holiday");
+}
+```
+
+| Method | Does |
+| --- | --- |
+| `getZones()` | Resolves with `{ name, enabled }` for each zone, in the unit's order, and with an empty array on a unit without zones |
+| `setZone(index, enabled)` | Opens or closes the zone at that place in `getZones()`, counted from 0 |
+| `getFanAuto()`, `getAirside()` | Resolve with `true` or `false`, or `null` on a unit that does not take the setting |
+| `setFanAuto(enabled)` | Lets the unit pick the fan speed itself, up to the `fanSpeed` that is set. It switches airside off |
+| `setAirside(enabled)` | Switches airside on or off. Switching it on switches fan auto off and sets `fanSpeed` to `level1` |
+
+A `fanSpeed` in `setState()` switches airside off and keeps fan auto.
+
+Only a unit with zones takes fan auto and airside, and it takes no `auto` fan
+speed and no `swingMode`: `getCapabilities()` lists what a unit takes.
+
 ### Errors and retries
 
 A client method that fails rejects with a `DaikinError`; branch on
@@ -285,13 +346,15 @@ A client method that fails rejects with a `DaikinError`; branch on
 | 502 | The adapter answered with an error: a `ret` or `rsc` other than OK, or a reply that does not parse |
 | 503 | The adapter refused or dropped the connection (a `DaikinConnectionError`), or DSIOT answered `rsc` 503 |
 | 504 | The request timed out, or the TLS handshake failed |
+| 501 | `AirbaseDaikinClient.setSpecialMode()`: an Airbase adapter has no request for a special mode |
 | Any other | The adapter's own HTTP status, such as 403 |
 
-Three failures are not a `DaikinError`: `discoverDevices()` rejects with the
+Four failures are not a `DaikinError`: `discoverDevices()` rejects with the
 socket's error, `createDaikinClient()` throws an `Error` for a
-[terminal uuid](#credentials) in the wrong form, and `multireqUpdate()` throws
+[terminal uuid](#credentials) in the wrong form, `multireqUpdate()` throws
 an `Error` for a path that names a resource without a leaf, such as
-`dgc_status`.
+`dgc_status`, and `setZone()` rejects with an `Error` for an index the unit
+has no zone at.
 
 Only a `DaikinConnectionError` is retried, up to five times by default.
 [DESIGN.md](DESIGN.md#retries) says why.
@@ -333,9 +396,10 @@ await simulator.stop();
 ```
 
 `startDsiotSimulator()` starts a DSIOT adapter and takes the same options:
-pass `protocol: "dsiot"` to `createDaikinClient`. A simulator speaks plain
-HTTP on a free port of `127.0.0.1`, which nothing outside the machine
-reaches.
+pass `protocol: "dsiot"` to `createDaikinClient`.
+`startAirbaseSimulator()` starts an [Airbase adapter](#airbase-simulator):
+pass `protocol: "airbase"`. A simulator speaks plain HTTP on a free port of
+`127.0.0.1`, which nothing outside the machine reaches.
 
 Describe the adapter and its unit in the types the clients resolve with:
 
@@ -358,6 +422,40 @@ Describe the adapter and its unit in the types the clients resolve with:
 `setState()` and `setSensors()` change a running simulator the same way.
 `setState()` throws an `Error` for a field the unit has nothing to hold, such
 as a `verticalPosition` on a unit without fixed louver positions.
+
+#### Airbase simulator
+
+`startAirbaseSimulator()` takes `deviceInfo`, `state` and `sensors` as the
+other two do, and a `unit` of its own. It reports no humidity unless
+`sensors` gives one, and its `setState()` throws an `Error` for a
+`targetHumidity`, a louver position or a special mode.
+
+```ts
+import { startAirbaseSimulator } from "daikin-local-control/simulators";
+
+const simulator = await startAirbaseSimulator({
+  unit: { zones: ["Living", "Bedrooms"], airside: true },
+  state: { power: true, fanSpeed: "level3" },
+});
+
+simulator.setZone(1, false); // someone closes a zone on the wall controller
+simulator.controlInfo.f_auto = "1"; // and switches fan auto on
+```
+
+| `unit` field | Holds | Defaults to |
+| --- | --- | --- |
+| `zones` | The names of the unit's zones, each open at the start | None: a unit without zones |
+| `auto`, `dehumidify` | `false` for a unit that does not offer the mode | `true` |
+| `fan` | `false` for a unit whose fan speed cannot be set | `true` |
+| `fanLevels` | 2 or 3 fan levels | 3 |
+| `airside` | `true` for a unit with zones that takes airside | `false` |
+| `swing` | `false` for a unit without zones that takes no direction | `true` |
+| `coolTemperaturesInC`, `heatTemperaturesInC` | `{ min, max }`, in whole degrees | None reported, so 18 to 32 and 10 to 30 |
+
+A unit with zones takes fan auto, and no `auto` fan speed and no direction.
+It answers HTTP 404 to a path outside `/skyfi`, as an Airbase adapter does,
+so `discoverDevices()` reports it as `airbase` when it is started with
+`answersDiscovery`.
 
 | To | Do |
 | --- | --- |
@@ -382,8 +480,9 @@ simulator with `answersDiscovery` rejects with the socket's error.
 For anything the options above do not cover, such as humidity settings or
 fixed louver positions, set the adapter's own fields. A classic simulator
 takes `basicInfo`, `modelInfo`, `controlInfo` and `sensorInfo`, the fields of
-each reply, and holds them under the same names. A DSIOT simulator takes
-`leaves`, and holds each leaf by its address. A field given this way replaces
+each reply, and holds them under the same names. An Airbase simulator takes
+those four and `zoneSetting`. A DSIOT simulator takes `leaves`, and holds each
+leaf by its address. A field given this way replaces
 what `unit` sets, and `state` and `sensors` replace it in turn. The package
 root exports the adapter's codes as tables, such as `CLASSIC_FAN_SPEED_CODES`
 and `DSIOT_PATHS`.
@@ -414,20 +513,34 @@ clients' codecs, and why no more.
 
 ## Coverage & limitations
 
-It supports the same markets and Wi-Fi adapters as the DAIKIN Mobile Controller
-app, so it is **not valid for every Daikin region or app**.
+It supports the Wi-Fi adapters of three apps, in the markets where each is
+used, so it is **not valid for every Daikin region or app**.
 
-| Region         | Markets using the DAIKIN Mobile Controller app                 |
-| -------------- | -------------------------------------------------------------- |
-| Southeast Asia | Thailand, Singapore, the Philippines                           |
-| East Asia      | Hong Kong, Taiwan                                              |
-| Oceania        | Australia, New Zealand                                         |
+| App | Markets | Adapters | Client |
+| --- | --- | --- | --- |
+| DAIKIN Mobile Controller | Thailand, Singapore, the Philippines, Hong Kong, Taiwan, Australia, New Zealand | BRP072A42, BRP072C42, BRP069 | `ClassicDaikinClient` |
+| DAIKIN Mobile Controller | The same | BRP084 | `DsiotDaikinClient` |
+| Daikin Airbase | Australia | BRP15B61, on a ducted unit | `AirbaseDaikinClient` |
+| ONECTA, once Daikin Online Controller | Europe | BRP069A and BRP069B series | `ClassicDaikinClient` |
 
-The app is published by Daikin Thailand and may be available in other countries
-too; if your local Daikin site points you to it, this package should apply. Units
-sold for other apps likely use a different protocol, e.g. Onecta / Daikin Online
-Controller (Europe), GO DAIKIN (Malaysia) or Daikin Comfort Control / Daikin One
-(North America).
+The DAIKIN Mobile Controller app is published by Daikin Thailand and may be
+available in other countries too; if your local Daikin site points you to it,
+this package should apply.
+
+Three limits apply, and [UNSUPPORTED.md](UNSUPPORTED.md) says what is not known
+about each:
+
+- **Europe**: power, mode, setpoint, fan, swing and special modes go to a
+  classic adapter there as they do elsewhere. `getCapabilities()` follows the
+  rules of the other markets, and which adapters there speak HTTPS is not
+  known.
+- **A DSIOT adapter in Europe** (BRP069C series) is not covered: it may not
+  answer on the LAN until it is switched on.
+- **An Airbase adapter** is told from a classic one by how it answers over
+  HTTP: no field of its discovery reply is known to differ.
+
+Units sold for other apps likely use a different protocol, e.g. GO DAIKIN
+(Malaysia) or Daikin Comfort Control / Daikin One (North America).
 
 This package is still young, so expect some rough edges. If something doesn't
 work with your unit, please

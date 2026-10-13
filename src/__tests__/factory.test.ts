@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { AirbaseDaikinClient } from "../clients/airbase.js";
 import { ClassicDaikinClient } from "../clients/classic.js";
 import type { DaikinClient } from "../clients/client.js";
 import { DsiotDaikinClient } from "../clients/dsiot.js";
@@ -48,6 +49,22 @@ describe("createDaikinClient", () => {
         headers: { "x-daikin-uuid": "0123456789abcdef0123456789abcdef" },
       },
     ]);
+  });
+
+  it("builds an AirbaseDaikinClient for an airbase device, which sends no uuid and no local password", async () => {
+    const adapter = await startMockAdapter(CLASSIC_REPLY);
+
+    const client = clientFor(
+      { host: adapter.host, protocol: "airbase", requiresLocalPassword: true },
+      { terminalUuid: "not a uuid", localPassword: "1234" },
+    );
+    await client.getState();
+
+    expect(client).toBeInstanceOf(AirbaseDaikinClient);
+    expect(adapter.received).toMatchObject([
+      { method: "GET", url: "/skyfi/aircon/get_control_info" },
+    ]);
+    expect(adapter.received[0]?.headers).not.toHaveProperty("x-daikin-uuid");
   });
 
   it("builds a DsiotDaikinClient for a dsiot device", async () => {

@@ -105,6 +105,9 @@ export const CLASSIC_SPECIAL_MODE_BITS: Record<SpecialMode, number> = {
   streamer: 4,
 };
 
+/** `type` in a discovery reply from an air conditioner's classic adapter. */
+export const CLASSIC_ADAPTER_TYPE = "aircon";
+
 /** `type` in `get_model_info` on a unit that only cools. */
 export const CLASSIC_COOLING_ONLY_TYPE = "C";
 

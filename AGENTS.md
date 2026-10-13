@@ -28,6 +28,9 @@ changing the code it covers.
 - **Build only confirmed protocol.** Implement an endpoint, parameter or value
   encoding only when its exact request and reply are known. List anything else
   in [UNSUPPORTED.md](UNSUPPORTED.md) with what is unknown; never ship a guess.
+- **Two independent open-source clients that agree confirm a behaviour**
+  where no Daikin app shows it. One client alone does not, and neither does a
+  second that copies the first.
 - **The package never reads the environment.** Nothing under `src/` reads
   `process.env` or picks up configuration on the caller's behalf: the caller
   passes it in.

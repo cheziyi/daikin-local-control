@@ -68,6 +68,7 @@ describe("the classic tables", () => {
       },
       CLASSIC_SPECIAL_MODE_KIND_CODES: { powerful: "1", econo: "2" },
       CLASSIC_SPECIAL_MODE_BITS: { powerful: 1, econo: 2, streamer: 4 },
+      CLASSIC_ADAPTER_TYPE: "aircon",
       CLASSIC_COOLING_ONLY_TYPE: "C",
       CLASSIC_TERMINAL_SCOPE_CODES: { self: "0", others: "1", all: "2" },
       CLASSIC_REMOTE_METHODS: { polling: "polling", homeOnly: "home only" },

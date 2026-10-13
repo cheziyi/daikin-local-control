@@ -1,5 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { parseDevice, parseDeviceInfo } from "../device.js";
+import { isAirConditioner, parseDevice, parseDeviceInfo } from "../device.js";
+
+describe("isAirConditioner", () => {
+  it("passes a classic adapter that reports type=aircon", () => {
+    expect(isAirConditioner({ type: "aircon" })).toBe(true);
+  });
+
+  it("passes a DSIOT adapter unless its cdev is an air cleaner's", () => {
+    expect(isAirConditioner({ type: "GPF" })).toBe(true);
+    expect(isAirConditioner({ type: "GPF", cdev: "RA" })).toBe(true);
+    expect(isAirConditioner({ type: "GPF", cdev: "1D" })).toBe(false);
+    expect(isAirConditioner({ type: "GPF", cdev: "CJ" })).toBe(false);
+  });
+
+  it("passes no other type, and no reply without one", () => {
+    for (const type of [
+      "cleaner",
+      "Water Heater",
+      "Floor Heater",
+      "circulator",
+      "common_adp",
+      "hotwater",
+    ]) {
+      expect(isAirConditioner({ type })).toBe(false);
+    }
+    expect(isAirConditioner({})).toBe(false);
+  });
+});
 
 describe("parseDevice", () => {
   it("reads a classic adapter outside secure mode and without a child lock", () => {
