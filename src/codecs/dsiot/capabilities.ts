@@ -17,30 +17,23 @@ import {
   VERTICAL_POSITIONS,
   type VerticalPosition,
 } from "../../models/state.js";
+import { decodeDsiotLittleEndian } from "./state.js";
 import {
+  DSIOT_ADAPTER_PATHS,
+  DSIOT_COOLING_ONLY_MODEL_TYPE,
   DSIOT_HORIZONTAL_POSITION_VALUES,
   DSIOT_MODE_PATHS,
   DSIOT_PATHS,
   DSIOT_SPECIAL_MODE_PATHS,
   DSIOT_VERTICAL_POSITION_VALUES,
   type DsiotSetpoint,
-  decodeDsiotLittleEndian,
-} from "./state.js";
+} from "./tables.js";
 
 const MODE_PATHS = Object.values(DSIOT_MODE_PATHS);
-
-const ADAPTER_PATHS = {
-  region: "adp_i.reg",
-  kind: "adp_i.kind",
-  energyMonitoring: "adp_i.func.en_ipower",
-  demandControl: "adp_i.func.en_demand",
-  scheduleTimer: "adp_i.func.en_scdltmr",
-} as const;
 
 // The `pt` of a special mode's leaf on a unit that takes the mode.
 const SPECIAL_MODE_OFFERED_TYPE = "2";
 
-const COOLING_ONLY_MODEL_TYPE = "01";
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "dehumidify",
   "cool",
@@ -61,7 +54,7 @@ export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {
   const modes =
-    values[DSIOT_PATHS.modelType] === COOLING_ONLY_MODEL_TYPE
+    values[DSIOT_PATHS.modelType] === DSIOT_COOLING_ONLY_MODEL_TYPE
       ? [...COOLING_ONLY_MODES]
       : [...OPERATING_MODES];
   const offered = (mode: OperatingMode, range: TemperatureRange) =>
@@ -87,7 +80,7 @@ export function parseDsiotCapabilities(
   const vertical = hasLouver(values, "vertical");
   const horizontal = hasLouver(values, "horizontal");
   const energyMonitoring =
-    values[ADAPTER_PATHS.energyMonitoring] === "1" &&
+    values[DSIOT_ADAPTER_PATHS.energyMonitoring] === "1" &&
     values[DSIOT_PATHS.energyMonitoring] === "01";
 
   return {
@@ -136,10 +129,10 @@ export function parseDsiotCapabilities(
     energyMonitoring,
     demandControl:
       energyMonitoring &&
-      values[ADAPTER_PATHS.kind] === "4" &&
-      values[ADAPTER_PATHS.demandControl] === "1",
+      values[DSIOT_ADAPTER_PATHS.kind] === "4" &&
+      values[DSIOT_ADAPTER_PATHS.demandControl] === "1",
     scheduleTimer: ["1", "2"].includes(
-      values[ADAPTER_PATHS.scheduleTimer] ?? "",
+      values[DSIOT_ADAPTER_PATHS.scheduleTimer] ?? "",
     ),
     model: values[DSIOT_PATHS.model],
   };
@@ -164,7 +157,7 @@ function takes(mask: number, value: number | undefined): boolean {
 
 // Japanese units (`jp`) follow other rules: see UNSUPPORTED.md.
 function fanSpeeds(values: Record<string, string>): FanSpeed[] {
-  const region = values[ADAPTER_PATHS.region];
+  const region = values[DSIOT_ADAPTER_PATHS.region];
   if (!region || region === "jp") {
     return [];
   }

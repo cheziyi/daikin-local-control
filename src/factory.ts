@@ -14,8 +14,9 @@ import {
 } from "./transport.js";
 
 export interface CreateDaikinClientOptions {
-  /** The terminal uuid, sent as `X-Daikin-uuid`. Generate one and reuse it:
-   * an adapter that requires registration remembers it. */
+  /** The terminal uuid, sent as `X-Daikin-uuid`: 32 lowercase hexadecimal
+   * digits, a UUID without its dashes. Generate one and reuse it: an adapter
+   * that requires registration remembers it. */
   terminalUuid: string;
   /** The child lock code, for a device whose `requiresLocalPassword` is true. */
   localPassword?: string;
@@ -40,8 +41,10 @@ export interface CreateDaikinClientOptions {
 /** Builds the client for a device: a `DsiotDaikinClient` when
  * `device.protocol` is `dsiot`, a `ClassicDaikinClient` otherwise. The client
  * sends over HTTPS when `device.usesHttps` is set, and sends the local
- * password when `options.localPassword` is given. Call `close` on the client
- * when done with the unit. */
+ * password when `options.localPassword` is given. It throws an `Error` when
+ * `options.terminalUuid` is not in the form
+ * `CreateDaikinClientOptions.terminalUuid` describes. Call `close` on the
+ * client when done with the unit. */
 export function createDaikinClient(
   device: DaikinDevice,
   options: CreateDaikinClientOptions,

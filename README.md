@@ -19,7 +19,7 @@ each:
 - **`ClassicDaikinClient`** — classic adapters (BRP072A42, BRP072C42, BRP069).
   Full core control plus typed [extended controls](#extended-controls).
 - **`DsiotDaikinClient`** — newer DSIOT adapters (BRP084). Power, mode,
-  setpoint, humidity, fan, swing and louver positions;
+  setpoint, humidity, fan, swing, louver positions and special modes;
   [UNSUPPORTED.md](UNSUPPORTED.md) lists what is not mapped yet.
 
 You normally don't pick one yourself: `createDaikinClient` chooses the right
@@ -111,15 +111,17 @@ for you.
 An adapter can need up to three things. Discovery tells you which ones apply
 (`device.requiresRegistration`, `device.requiresLocalPassword`).
 
-**Terminal uuid (always).** It identifies your app to the adapter. Any random
-UUID works. Generate it **once**, store it, and reuse it on every run: an
-adapter that requires registration remembers it, so a new uuid means registering
-again.
+**Terminal uuid (always).** It identifies your app to the adapter. Pass 32
+lowercase hexadecimal digits, a UUID without its dashes: `createDaikinClient()`
+throws an `Error` for any other form, and sends the uuid as given. Generate it
+**once**, store it, and reuse it on every run: an adapter that requires
+registration remembers it, so a new uuid means registering again.
 
 ```ts
 import { randomUUID } from "node:crypto";
 
-const savedUuid = loadFromConfig() ?? saveToConfig(randomUUID());
+const savedUuid =
+  loadFromConfig() ?? saveToConfig(randomUUID().replaceAll("-", ""));
 ```
 
 **KEY (when `device.requiresRegistration` is `true`).** These
@@ -204,7 +206,12 @@ given, whether or not the unit lists it.
 | `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position |
 
 `setState()` takes no `specialModes`: turn one on or off with
-[`setSpecialMode()`](#extended-controls), which only a classic adapter has.
+`setSpecialMode()`, which sends a request of its own. Check the mode against
+`getCapabilities().specialModes` first: the client sends any mode as given.
+
+```ts
+await client.setSpecialMode("powerful", true);
+```
 
 Pass `maxStateAgeForSetStateInMs` to `createDaikinClient` when you poll the
 state anyway: `setState()` reads the unit before each write, and with it builds
@@ -238,7 +245,6 @@ if (client instanceof ClassicDaikinClient) {
     maxPowerInPercent: 70,
     mode: "manual",
   });
-  await client.setSpecialMode("powerful", true);
   await client.setOutOfHomeAccess(false); // home network only
   await client.setEnergyPrice(0.3); // per kWh
   await client.setMetadata({
@@ -278,9 +284,11 @@ A client method that fails rejects with a `DaikinError`; branch on
 | 504 | The request timed out, or the TLS handshake failed |
 | Any other | The adapter's own HTTP status, such as 403 |
 
-Two failures are not a `DaikinError`: `discoverDevices()` rejects with the
-socket's error, and `multireqUpdate()` throws an `Error` for a path that names
-a resource without a leaf, such as `dgc_status`.
+Three failures are not a `DaikinError`: `discoverDevices()` rejects with the
+socket's error, `createDaikinClient()` throws an `Error` for a
+[terminal uuid](#credentials) in the wrong form, and `multireqUpdate()` throws
+an `Error` for a path that names a resource without a leaf, such as
+`dgc_status`.
 
 Only a `DaikinConnectionError` is retried, up to five times by default.
 [DESIGN.md](DESIGN.md#retries) says why.
@@ -290,6 +298,116 @@ Only a `DaikinConnectionError` is retried, up to five times by default.
 | Change how often and how long a client retries | `retry: { delaysInMs: [0, 500] }` to `createDaikinClient`: one wait, in milliseconds, before each retry |
 | Stop a client retrying | `retry: { delaysInMs: [] }` to `createDaikinClient` |
 | Send one request that is not safe to repeat | `{ retry: false }` as the last argument of `command()`, `multireqGet()` or `multireqUpdate()` |
+
+### Simulators
+
+Test your code against a simulated adapter instead of a real one: start a
+simulator, and point a client at its `host`. Import the simulators from
+`daikin-local-control/simulators`: the package root does not export them.
+
+```ts
+import { createDaikinClient } from "daikin-local-control";
+import { startClassicSimulator } from "daikin-local-control/simulators";
+
+const simulator = await startClassicSimulator({
+  deviceInfo: { name: "Bedroom", macAddress: "A4:08:EA:CC:91:D4" },
+  unit: { coolingOnly: true, swing: "vertical" },
+  state: { power: true, targetTemperatureInC: 22 },
+  sensors: { indoorTemperatureInC: 27 },
+});
+const client = createDaikinClient(
+  { host: simulator.host, protocol: "classic" },
+  { terminalUuid: savedUuid },
+);
+
+await client.getState(); // power: true, mode: "cool", targetTemperatureInC: 22
+
+simulator.setState({ power: false }); // someone uses the remote control
+simulator.setSensors({ indoorTemperatureInC: 24 }); // the room cools down
+
+await client.close();
+await simulator.stop();
+```
+
+`startDsiotSimulator()` starts a DSIOT adapter and takes the same options:
+pass `protocol: "dsiot"` to `createDaikinClient`. A simulator speaks plain
+HTTP on a free port of `127.0.0.1`, which nothing outside the machine
+reaches.
+
+Describe the adapter and its unit in the types the clients resolve with:
+
+| Option | Holds | Defaults to |
+| --- | --- | --- |
+| `deviceInfo` | `name`, `macAddress` and `firmwareVersion`, as `getDeviceInfo()` reads them | A name of `Simulator` |
+| `unit` | What the unit has: see below | A heat pump with every fan speed, swing on both axes and all three special modes |
+| `state` | Any fields of a `DaikinState`, `specialModes` included | Off, in cool at 24 °C, on the auto fan speed |
+| `sensors` | Any fields of a `DaikinSensors`; `null` is a reading the unit lacks | 26 °C and 55 % indoors, 30 °C outdoors |
+
+| `unit` field | Holds | Defaults to |
+| --- | --- | --- |
+| `coolingOnly` | `true` for a unit that offers dehumidify, cool and fan alone | `false` |
+| `fan` | `false` for a unit whose fan speed cannot be set | `true` |
+| `fanLevels` | 2, 3 or 5 fan levels. Classic simulator only | 5 |
+| `swing` | `none`, `vertical` or `both` | `both` |
+| `specialModes` | Those of `powerful`, `econo` and `streamer` the unit takes | All three |
+| `coolTemperaturesInC`, `heatTemperaturesInC` | `{ min, max }` | 18 to 32 and 10 to 30 |
+
+`setState()` and `setSensors()` change a running simulator the same way.
+`setState()` throws an `Error` for a field the unit has nothing to hold, such
+as a `verticalPosition` on a unit without fixed louver positions.
+
+| To | Do |
+| --- | --- |
+| Check what the unit holds | Call `getState()` on a client |
+| Check what your code sent | Read `simulator.requests`: each has `method`, `path`, `query`, `headers` and `body` |
+| Require registration (classic) | Pass `key`: the simulator answers HTTP 403 until `registerTerminal()` is given it |
+| Require the child lock code | Pass `localPassword` |
+| Make the adapter slow | Pass `replyDelayInMs`: it answers one request at a time, so a second request waits for the first |
+| Make the adapter unreachable | `await simulator.stop()` |
+| Reach it from another machine | Pass `address`, an address of this machine other than the default `127.0.0.1` |
+| Have `discoverDevices()` find it | Pass `answersDiscovery: true` |
+
+Start as many discoverable simulators as you like, in one process or several:
+`discoverDevices()` resolves with one device for each, at `127.0.0.1` and the
+simulator's own port.
+
+`discoverDevices()` broadcasts the probe, so it also finds the real adapters
+on the LAN, and it needs a network to broadcast on. Only a program that is
+not a simulator gets in the way: while one holds UDP port 30050, starting a
+simulator with `answersDiscovery` rejects with the socket's error.
+
+For anything the options above do not cover, such as humidity settings or
+fixed louver positions, set the adapter's own fields. A classic simulator
+takes `basicInfo`, `modelInfo`, `controlInfo` and `sensorInfo`, the fields of
+each reply, and holds them under the same names. A DSIOT simulator takes
+`leaves`, and holds each leaf by its address. A field given this way replaces
+what `unit` sets, and `state` and `sensors` replace it in turn. The package
+root exports the adapter's codes as tables, such as `CLASSIC_FAN_SPEED_CODES`
+and `DSIOT_PATHS`.
+
+```ts
+// A classic unit with 3D airflow: both louvers, and five fixed positions.
+const classic = await startClassicSimulator({
+  modelInfo: { en_fdir2: "1", s_fdir_ud: "81", s_fdir_ud_step: "5", s_fdir_lr: "1" },
+  controlInfo: { f_dir_ud: "0", f_dir_lr: "0" },
+});
+classic.setState({ verticalPosition: "position3" });
+
+// A DSIOT unit that takes a humidity setting in cool.
+const dsiot = await startDsiotSimulator({
+  leaves: {
+    "/dsiot/edge/adr_0100.dgc_status.e_1002.e_3001.p_0C": { pv: "00", pt: 2 },
+  },
+});
+dsiot.setState({ targetHumidity: "auto" });
+```
+
+A simulator answers HTTP 501 to a request it has no answer for, so a client
+rejects with a `DaikinError` whose `httpStatusCode` is 501.
+[UNSUPPORTED.md](UNSUPPORTED.md#simulators) lists what a simulator leaves out,
+and each answer that is not known to be a real adapter's.
+[DESIGN.md](DESIGN.md#simulators) says what a simulator shares with the
+clients' codecs, and why no more.
 
 ## Coverage & limitations
 

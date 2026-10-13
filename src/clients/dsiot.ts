@@ -3,15 +3,16 @@ import { parseDsiotDeviceInfo } from "../codecs/dsiot/device.js";
 import {
   buildDsiotMultireqGet,
   buildDsiotMultireqUpdate,
-  DSIOT_TARGETS,
   type DsiotUpdate,
   parseDsiotMultireqReply,
 } from "../codecs/dsiot/multireq.js";
 import {
   applyDsiotControl,
+  buildDsiotSpecialModeUpdate,
   parseDsiotSensors,
   parseDsiotState,
 } from "../codecs/dsiot/state.js";
+import { DSIOT_TARGETS } from "../codecs/dsiot/tables.js";
 import type { DaikinCapabilities } from "../models/capabilities.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
@@ -19,6 +20,7 @@ import type {
   DaikinSensors,
   DaikinState,
   DaikinStateAndSensors,
+  SpecialMode,
 } from "../models/state.js";
 import {
   type DaikinRequestOptions,
@@ -101,6 +103,11 @@ export class DsiotDaikinClient implements DaikinClient {
       state: parseDsiotState(values),
       sensors: parseDsiotSensors(values),
     };
+  }
+
+  /** One leaf of `dgc_status`, on the outdoor unit for powerful. */
+  async setSpecialMode(mode: SpecialMode, enabled: boolean): Promise<void> {
+    await this.multireq("PUT", buildDsiotSpecialModeUpdate(mode, enabled));
   }
 
   // --- extended controls ---------------------------------------------------

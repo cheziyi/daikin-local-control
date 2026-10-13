@@ -15,126 +15,53 @@ import {
   VERTICAL_POSITIONS,
   type VerticalPosition,
 } from "../../models/state.js";
-import type { DsiotUpdate } from "./multireq.js";
+import { buildDsiotMultireqUpdate, type DsiotUpdate } from "./multireq.js";
+import {
+  DSIOT_EDGES,
+  DSIOT_FAN_SPEED_CODES,
+  DSIOT_FIXED_LOUVER_VALUES,
+  DSIOT_HORIZONTAL_POSITION_VALUES,
+  DSIOT_HUMIDITY_OFF,
+  DSIOT_HUMIDITY_OFF_KEPT,
+  DSIOT_HUMIDITY_PERCENTAGE,
+  DSIOT_HUMIDITY_SETTING_FLAGS,
+  DSIOT_LOUVER_STOP,
+  DSIOT_LOUVER_SWING,
+  DSIOT_LOUVER_VALUES,
+  DSIOT_MODE_PATHS,
+  DSIOT_OFF,
+  DSIOT_ON,
+  DSIOT_OPERATING_MODE_CODES,
+  DSIOT_PATHS,
+  DSIOT_SPECIAL_MODE_PATHS,
+  DSIOT_VERTICAL_POSITION_VALUES,
+  type DsiotHumidity,
+} from "./tables.js";
 
-/** Full dotted paths into the `dgc_status` trees. `e_1002` lives on the indoor
- * edge and `e_1003` on the outdoor edge. */
-export const DSIOT_PATHS = {
-  power: "dgc_status.e_1002.e_A002.p_01",
-  /** Sent with every control. */
-  powerTransition: "dgc_status.e_1002.e_3003.p_2D",
-  mode: "dgc_status.e_1002.e_3001.p_01",
-  indoorTemperature: "dgc_status.e_1002.e_A00B.p_01",
-  indoorHumidity: "dgc_status.e_1002.e_A00B.p_02",
-  outdoorTemperature: "dgc_status.e_1003.e_A00D.p_01",
-  model: "dgc_status.e_1002.e_A001.p_0D",
-  modelType: "dgc_status.e_1002.e_A001.p_07",
-  energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
-} as const;
-
-/** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
- * edge. */
-export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
-  powerful: "dgc_status.e_1003.e_3002.p_44",
-  econo: "dgc_status.e_1002.e_3003.p_24",
-  streamer: "dgc_status.e_1002.e_3003.p_20",
-};
-const SPECIAL_MODE_ON = "01";
-
-export interface DsiotSetpoint {
-  path: string;
-  /** Auto and dehumidify are a signed byte; cool and heat are little-endian. */
-  signed: boolean;
-  /** The dehumidify setpoint is read-only. */
-  writable: boolean;
+/** Builds the body of the multireq write that turns a special mode on or off:
+ * its one leaf, on the outdoor edge for powerful and on the indoor edge for
+ * the rest. */
+export function buildDsiotSpecialModeUpdate(
+  mode: SpecialMode,
+  enabled: boolean,
+): object {
+  return buildDsiotMultireqUpdate(
+    [
+      {
+        path: DSIOT_SPECIAL_MODE_PATHS[mode],
+        value: encodeDsiotBoolean(enabled),
+      },
+    ],
+    mode === "powerful" ? DSIOT_EDGES.outdoor : DSIOT_EDGES.indoor,
+  );
 }
-
-export interface DsiotHumidity {
-  /** Counted in steps of the leaf's `md.st`. */
-  value: string;
-  /** The setting: `00` or `05` off, `01` the percentage in `value`, and one
-   * value for each `HumiditySetting`. */
-  flag: string;
-}
-
-export interface DsiotModePaths {
-  /** Absent in fan mode. */
-  setpoint?: DsiotSetpoint;
-  /** Absent in fan mode. */
-  humidity?: DsiotHumidity;
-  fanSpeed: string;
-  vertical: string;
-  horizontal: string;
-}
-
-export const DSIOT_MODE_NODE = "dgc_status.e_1002.e_3001";
-
-export const DSIOT_MODE_PATHS: Record<OperatingMode, DsiotModePaths> = {
-  auto: {
-    setpoint: { path: `${DSIOT_MODE_NODE}.p_1D`, signed: true, writable: true },
-    humidity: {
-      value: `${DSIOT_MODE_NODE}.p_2E`,
-      flag: `${DSIOT_MODE_NODE}.p_2F`,
-    },
-    fanSpeed: `${DSIOT_MODE_NODE}.p_26`,
-    vertical: `${DSIOT_MODE_NODE}.p_20`,
-    horizontal: `${DSIOT_MODE_NODE}.p_21`,
-  },
-  dehumidify: {
-    setpoint: {
-      path: `${DSIOT_MODE_NODE}.p_1E`,
-      signed: true,
-      writable: false,
-    },
-    humidity: {
-      value: `${DSIOT_MODE_NODE}.p_30`,
-      flag: `${DSIOT_MODE_NODE}.p_31`,
-    },
-    fanSpeed: `${DSIOT_MODE_NODE}.p_27`,
-    vertical: `${DSIOT_MODE_NODE}.p_22`,
-    horizontal: `${DSIOT_MODE_NODE}.p_23`,
-  },
-  cool: {
-    setpoint: {
-      path: `${DSIOT_MODE_NODE}.p_02`,
-      signed: false,
-      writable: true,
-    },
-    humidity: {
-      value: `${DSIOT_MODE_NODE}.p_0B`,
-      flag: `${DSIOT_MODE_NODE}.p_0C`,
-    },
-    fanSpeed: `${DSIOT_MODE_NODE}.p_09`,
-    vertical: `${DSIOT_MODE_NODE}.p_05`,
-    horizontal: `${DSIOT_MODE_NODE}.p_06`,
-  },
-  heat: {
-    setpoint: {
-      path: `${DSIOT_MODE_NODE}.p_03`,
-      signed: false,
-      writable: true,
-    },
-    humidity: {
-      value: `${DSIOT_MODE_NODE}.p_2C`,
-      flag: `${DSIOT_MODE_NODE}.p_2D`,
-    },
-    fanSpeed: `${DSIOT_MODE_NODE}.p_0A`,
-    vertical: `${DSIOT_MODE_NODE}.p_07`,
-    horizontal: `${DSIOT_MODE_NODE}.p_08`,
-  },
-  fan: {
-    fanSpeed: `${DSIOT_MODE_NODE}.p_28`,
-    vertical: `${DSIOT_MODE_NODE}.p_24`,
-    horizontal: `${DSIOT_MODE_NODE}.p_25`,
-  },
-};
 
 // --- value encodings -------------------------------------------------------
 // Leaf values are hex strings. Multi-byte values are little-endian, and
 // temperatures count half degrees.
 
 export function encodeDsiotBoolean(on: boolean): string {
-  return on ? "01" : "00";
+  return on ? DSIOT_ON : DSIOT_OFF;
 }
 
 export function decodeDsiotBoolean(pv: string | undefined): boolean {
@@ -196,14 +123,6 @@ function nullIfNaN(value: number): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-const OPERATING_MODE_CODES: Record<OperatingMode, string> = {
-  fan: "0000",
-  heat: "0100",
-  cool: "0200",
-  auto: "0300",
-  dehumidify: "0500",
-};
-
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
   "0000": "fan",
   "0100": "heat",
@@ -215,7 +134,7 @@ const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
 };
 
 export function encodeDsiotMode(mode: OperatingMode): string {
-  return OPERATING_MODE_CODES[mode];
+  return DSIOT_OPERATING_MODE_CODES[mode];
 }
 
 export function decodeDsiotMode(
@@ -224,25 +143,15 @@ export function decodeDsiotMode(
   return OPERATING_MODES_BY_CODE[(pv ?? "").toUpperCase()];
 }
 
-const FAN_SPEED_CODES: Record<FanSpeed, string> = {
-  auto: "0A00",
-  silent: "0B00",
-  level1: "0300",
-  level2: "0400",
-  level3: "0500",
-  level4: "0600",
-  level5: "0700",
-};
-
 const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(
-  Object.entries(FAN_SPEED_CODES).map(([speed, code]) => [
+  Object.entries(DSIOT_FAN_SPEED_CODES).map(([speed, code]) => [
     code,
     speed as FanSpeed,
   ]),
 );
 
 export function encodeDsiotFanSpeed(speed: FanSpeed): string {
-  return FAN_SPEED_CODES[speed];
+  return DSIOT_FAN_SPEED_CODES[speed];
 }
 
 export function decodeDsiotFanSpeed(
@@ -251,48 +160,12 @@ export function decodeDsiotFanSpeed(
   return FAN_SPEEDS_BY_CODE[(pv ?? "").toUpperCase()];
 }
 
-/** The values a louver leaf holds besides a fixed position, which is 1-14.
- * The leaf is three bytes, little-endian, and bit n of its `md.mx` is set
- * when the unit takes value n. */
-export const DSIOT_LOUVER_VALUES = {
-  stop: 0,
-  swing: 15,
-  auto: 16,
-  naturalWind: 19,
-  floorWarming: 25,
-} as const;
-
-const FIXED_LOUVER_VALUES = Array.from({ length: 14 }, (_, index) => index + 1);
-
-export const DSIOT_LOUVER_STOP = "000000";
-export const DSIOT_LOUVER_SWING = "0F0000";
-
 export function isDsiotLouverSwinging(pv: string | undefined): boolean {
   return (pv ?? "").toUpperCase() === DSIOT_LOUVER_SWING;
 }
 
-/** The value each `VerticalPosition` is held as. A fixed position has none: it
- * is held as the value at its rank among the fixed values the unit takes. */
-export const DSIOT_VERTICAL_POSITION_VALUES: Partial<
-  Record<VerticalPosition, number>
-> = {
-  stop: DSIOT_LOUVER_VALUES.stop,
-  swing: DSIOT_LOUVER_VALUES.swing,
-  naturalWind: DSIOT_LOUVER_VALUES.naturalWind,
-  auto: DSIOT_LOUVER_VALUES.auto,
-  floorWarming: DSIOT_LOUVER_VALUES.floorWarming,
-};
 const FIXED_VERTICAL_POSITIONS: readonly VerticalPosition[] =
   FIXED_LOUVER_POSITIONS;
-/** The value each `HorizontalPosition` is held as. `stop` and a fixed position
- * have none: see UNSUPPORTED.md. */
-export const DSIOT_HORIZONTAL_POSITION_VALUES: Partial<
-  Record<HorizontalPosition, number>
-> = {
-  swing: DSIOT_LOUVER_VALUES.swing,
-  auto: DSIOT_LOUVER_VALUES.auto,
-};
-
 function positionOf<PositionT extends string>(
   positions: readonly PositionT[],
   held: Partial<Record<PositionT, number>>,
@@ -310,7 +183,7 @@ function fixedLouverValues(
   path: string,
 ): number[] {
   const mask = decodeDsiotLittleEndian(values[`${path}.md.mx`] ?? "");
-  return FIXED_LOUVER_VALUES.filter((value) => mask & (1 << value));
+  return DSIOT_FIXED_LOUVER_VALUES.filter((value) => mask & (1 << value));
 }
 
 function encodeLouver(value: number): string {
@@ -383,22 +256,9 @@ function encodeHorizontalPosition(
   return value === undefined ? undefined : encodeLouver(value);
 }
 
-const HUMIDITY_OFF = "00";
-const HUMIDITY_ON = "01";
-// Also reads as off, and a control that switches humidity off leaves it.
-const HUMIDITY_OFF_KEPT = "05";
-const HUMIDITY_SETTING_FLAGS: Record<
-  Exclude<HumiditySetting, "off">,
-  string
-> = {
-  auto: "02",
-  autoHigh: "03",
-  autoLow: "04",
-  continuous: "06",
-};
 const HUMIDITY_SETTINGS_BY_FLAG: Record<string, HumiditySetting> =
   Object.fromEntries(
-    Object.entries(HUMIDITY_SETTING_FLAGS).map(([setting, flag]) => [
+    Object.entries(DSIOT_HUMIDITY_SETTING_FLAGS).map(([setting, flag]) => [
       flag,
       setting as HumiditySetting,
     ]),
@@ -421,10 +281,10 @@ function parseTargetHumidity(
   humidity: DsiotHumidity | undefined,
 ): TargetHumidity | null {
   const flag = humidity && values[humidity.flag];
-  if (flag === HUMIDITY_OFF || flag === HUMIDITY_OFF_KEPT) {
+  if (flag === DSIOT_HUMIDITY_OFF || flag === DSIOT_HUMIDITY_OFF_KEPT) {
     return "off";
   }
-  if (humidity === undefined || flag !== HUMIDITY_ON) {
+  if (humidity === undefined || flag !== DSIOT_HUMIDITY_PERCENTAGE) {
     return HUMIDITY_SETTINGS_BY_FLAG[flag ?? ""] ?? null;
   }
   const count = Number.parseInt(values[humidity.value] ?? "", 16);
@@ -447,18 +307,22 @@ function applyTargetHumidity(
       {
         path: flag,
         value:
-          values[flag] === HUMIDITY_OFF_KEPT ? HUMIDITY_OFF_KEPT : HUMIDITY_OFF,
+          values[flag] === DSIOT_HUMIDITY_OFF_KEPT
+            ? DSIOT_HUMIDITY_OFF_KEPT
+            : DSIOT_HUMIDITY_OFF,
       },
     ];
   }
   if (typeof targetHumidity === "string") {
-    return [{ path: flag, value: HUMIDITY_SETTING_FLAGS[targetHumidity] }];
+    return [
+      { path: flag, value: DSIOT_HUMIDITY_SETTING_FLAGS[targetHumidity] },
+    ];
   }
   const count = Math.trunc(
     targetHumidity.percent / decodeStep(values[`${value}.md.st`]),
   );
   return [
-    { path: flag, value: HUMIDITY_ON },
+    { path: flag, value: DSIOT_HUMIDITY_PERCENTAGE },
     { path: value, value: count.toString(16).toUpperCase().padStart(2, "0") },
   ];
 }
@@ -474,7 +338,7 @@ function isHumidityOn(
     return false;
   }
   return targetHumidity == null
-    ? flag !== HUMIDITY_OFF && flag !== HUMIDITY_OFF_KEPT
+    ? flag !== DSIOT_HUMIDITY_OFF && flag !== DSIOT_HUMIDITY_OFF_KEPT
     : targetHumidity !== "off";
 }
 
@@ -504,7 +368,7 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
     verticalPosition: parseVerticalPosition(values, paths.vertical),
     horizontalPosition: parseHorizontalPosition(values[paths.horizontal]),
     specialModes: SPECIAL_MODES.filter(
-      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === SPECIAL_MODE_ON,
+      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === DSIOT_ON,
     ),
   };
 }

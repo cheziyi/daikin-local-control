@@ -16,16 +16,12 @@ import {
   type TargetHumidity,
   type VerticalPosition,
 } from "../../models/state.js";
+import {
+  CLASSIC_COOLING_ONLY_TYPE,
+  CLASSIC_SPECIAL_MODE_BITS,
+} from "./tables.js";
 
 const CAPABILITY_VERSIONS = ["0", "1", "2", "3"];
-// `en_spmode` sets one bit for each special mode the unit takes. Bit 8 is a
-// mode outside `SpecialMode`. The powerful and econo bits count only at
-// `cpv=3` with a `cpv_minor` other than `00`: see UNSUPPORTED.md.
-const SPECIAL_MODE_BITS: Record<SpecialMode, number> = {
-  powerful: 1,
-  econo: 2,
-  streamer: 4,
-};
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "cool",
   "dehumidify",
@@ -120,7 +116,8 @@ export function parseClassicCapabilities(
 }
 
 // Lists none for a unit that reports no `en_spmode`, and econo in every mode
-// but fan: see UNSUPPORTED.md.
+// but fan. The powerful and econo bits count only at `cpv=3` with a
+// `cpv_minor` other than `00`: see UNSUPPORTED.md.
 function specialModes(
   fields: Record<string, string>,
   cpv: string,
@@ -131,7 +128,7 @@ function specialModes(
     cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
   const taken = SPECIAL_MODES.filter(
     (specialMode) =>
-      (bits & SPECIAL_MODE_BITS[specialMode]) !== 0 &&
+      (bits & CLASSIC_SPECIAL_MODE_BITS[specialMode]) !== 0 &&
       (specialMode === "streamer" || followsPowerfulAndEcono),
   );
   const inMode = (mode: OperatingMode) =>
@@ -155,7 +152,7 @@ function modes(fields: Record<string, string>, cpv: string): OperatingMode[] {
   if (!CAPABILITY_VERSIONS.includes(cpv)) {
     return [];
   }
-  return fields.model_type === "C"
+  return fields.model_type === CLASSIC_COOLING_ONLY_TYPE
     ? OPERATING_MODES.filter((mode) => COOLING_ONLY_MODES.includes(mode))
     : [...OPERATING_MODES];
 }

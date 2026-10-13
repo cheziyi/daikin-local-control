@@ -7,35 +7,19 @@ import type {
 } from "../../models/extendedControl.js";
 import type { SpecialMode } from "../../models/state.js";
 import { decodeClassicText } from "./keyValue.js";
+import {
+  CLASSIC_REMOTE_METHODS,
+  CLASSIC_SPECIAL_MODE_KIND_CODES,
+  CLASSIC_TERMINAL_SCOPE_CODES,
+} from "./tables.js";
 
 // Encodes each control outside `DaikinState` as the query its classic `set_*`
 // endpoint takes, and reads each one back from the reply that reports it.
-
-const TERMINAL_SCOPE_CODES: Record<TerminalScope, string> = {
-  self: "0",
-  others: "1",
-  all: "2",
-};
 
 const DEMAND_MODE_CODES: Record<DemandMode, string> = {
   manual: "0",
   auto: "2",
 };
-
-// `spmode_kind` on the wire, which numbers the modes differently from the
-// `adv` that `parseClassicState` reads.
-const SPECIAL_MODE_KIND_CODES: Record<
-  Exclude<SpecialMode, "streamer">,
-  string
-> = {
-  powerful: "1",
-  econo: "2",
-};
-
-// `method`: the adapter is reached from outside the home network while it
-// polls, and from inside only otherwise.
-const REMOTE_METHOD_POLLING = "polling";
-const REMOTE_METHOD_HOME_ONLY = "home only";
 
 const REMOTE_METHOD_INTERVALS = ["notice_ip_int", "notice_sync_int"];
 
@@ -81,7 +65,10 @@ export function encodeClassicSpecialMode(
 ): Record<string, string> {
   return mode === "streamer"
     ? { en_streamer: flag(enabled) }
-    : { set_spmode: flag(enabled), spmode_kind: SPECIAL_MODE_KIND_CODES[mode] };
+    : {
+        set_spmode: flag(enabled),
+        spmode_kind: CLASSIC_SPECIAL_MODE_KIND_CODES[mode],
+      };
 }
 
 /** Reads out-of-home access from a `basic_info` reply: `null` when it carries
@@ -91,7 +78,7 @@ export function parseClassicOutOfHomeAccess(
 ): boolean | null {
   return fields.method === undefined
     ? null
-    : fields.method === REMOTE_METHOD_POLLING;
+    : fields.method === CLASSIC_REMOTE_METHODS.polling;
 }
 
 /** Turns `current`, the `get_remote_method` reply, and `enabled` into the
@@ -102,7 +89,9 @@ export function applyClassicOutOfHomeAccess(
   enabled: boolean,
 ): Record<string, string> {
   const query: Record<string, string> = {
-    method: enabled ? REMOTE_METHOD_POLLING : REMOTE_METHOD_HOME_ONLY,
+    method: enabled
+      ? CLASSIC_REMOTE_METHODS.polling
+      : CLASSIC_REMOTE_METHODS.homeOnly,
   };
   for (const key of REMOTE_METHOD_INTERVALS) {
     const value = current[key];
@@ -171,7 +160,7 @@ export function encodeClassicTerminalKey(key: string): Record<string, string> {
 export function encodeClassicTerminalScope(
   scope: TerminalScope,
 ): Record<string, string> {
-  return { type: TERMINAL_SCOPE_CODES[scope] };
+  return { type: CLASSIC_TERMINAL_SCOPE_CODES[scope] };
 }
 
 function flag(on: boolean): string {

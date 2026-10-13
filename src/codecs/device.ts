@@ -1,7 +1,7 @@
 import type { DaikinDevice, DaikinDeviceInfo } from "../models/device.js";
 import { decodeClassicText } from "./classic/keyValue.js";
+import { DSIOT_ADAPTER_TYPE } from "./dsiot/tables.js";
 
-const DSIOT_TYPE = "GPF";
 const MARVELL_ADP_KIND = "3";
 
 /** Turns a `basic_info` reply into a `DaikinDevice`: `type=GPF` marks a DSIOT
@@ -11,7 +11,7 @@ export function parseDevice(
   host: string,
   basicInfo: Record<string, string>,
 ): DaikinDevice {
-  const protocol = basicInfo.type === DSIOT_TYPE ? "dsiot" : "classic";
+  const protocol = basicInfo.type === DSIOT_ADAPTER_TYPE ? "dsiot" : "classic";
   const secure = basicInfo.en_secure === "1";
   return {
     host: basicInfo.api_port ? `${host}:${basicInfo.api_port}` : host,

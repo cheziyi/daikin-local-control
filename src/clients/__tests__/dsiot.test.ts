@@ -6,9 +6,8 @@ import {
 import {
   buildDsiotMultireqGet,
   buildDsiotMultireqUpdate,
-  DSIOT_TARGETS,
 } from "../../codecs/dsiot/multireq.js";
-import { DSIOT_PATHS } from "../../codecs/dsiot/state.js";
+import { DSIOT_PATHS, DSIOT_TARGETS } from "../../codecs/dsiot/tables.js";
 import { DaikinConnectionError, DaikinError } from "../../error.js";
 import { DsiotDaikinClient } from "../dsiot.js";
 import { failingFirst, MockDaikinTransport } from "./mocks/transport.js";
@@ -393,6 +392,76 @@ describe("DsiotDaikinClient", () => {
         "horizontal",
         "both",
       ]);
+    });
+  });
+
+  describe("setSpecialMode", () => {
+    it("writes the mode's leaf to the indoor unit, without reading first", async () => {
+      const transport = adapter(WRITTEN);
+
+      await dsiotClient(transport).setSpecialMode("econo", true);
+
+      expect(transport.sent).toStrictEqual([
+        {
+          method: "PUT",
+          path: MULTIREQ,
+          jsonBody: {
+            requests: [
+              {
+                op: 3,
+                to: "/dsiot/edge/adr_0100.dgc_status",
+                pc: {
+                  pn: "dgc_status",
+                  pch: [
+                    {
+                      pn: "e_1002",
+                      pch: [{ pn: "e_3003", pch: [{ pn: "p_24", pv: "01" }] }],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it("writes powerful to the outdoor unit", async () => {
+      const transport = adapter(WRITTEN);
+
+      await dsiotClient(transport).setSpecialMode("powerful", false);
+
+      expect(transport.sent).toMatchObject([
+        {
+          method: "PUT",
+          jsonBody: {
+            requests: [
+              {
+                to: "/dsiot/edge/adr_0200.dgc_status",
+                pc: {
+                  pn: "dgc_status",
+                  pch: [
+                    {
+                      pn: "e_1003",
+                      pch: [{ pn: "e_3002", pch: [{ pn: "p_44", pv: "00" }] }],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it("rejects with a DaikinError when the adapter answers the write an rsc that is not OK", async () => {
+      const transport = new MockDaikinTransport(() =>
+        JSON.stringify({ responses: [{ rsc: 4000 }] }),
+      );
+
+      await expect(
+        dsiotClient(transport).setSpecialMode("streamer", true),
+      ).rejects.toMatchObject({ httpStatusCode: 502 });
     });
   });
 

@@ -133,6 +133,14 @@ export class ClassicDaikinClient implements DaikinClient {
     return { state: await this.getState(), sensors: await this.getSensors() };
   }
 
+  /** `set_special_mode`, an endpoint of its own beside `set_control_info`. */
+  async setSpecialMode(mode: SpecialMode, enabled: boolean): Promise<void> {
+    await this.command(
+      CLASSIC_ROUTES.setSpecialMode,
+      encodeClassicSpecialMode(mode, enabled),
+    );
+  }
+
   // --- extended controls ---------------------------------------------------
   // Each write goes to its own endpoint, not `set_control_info`.
 
@@ -168,14 +176,6 @@ export class ClassicDaikinClient implements DaikinClient {
     await this.command(
       CLASSIC_ROUTES.setDemandControl,
       encodeClassicDemandControl(demand),
-    );
-  }
-
-  /** Powerful, econo or streamer (`set_special_mode`). */
-  async setSpecialMode(mode: SpecialMode, enabled: boolean): Promise<void> {
-    await this.command(
-      CLASSIC_ROUTES.setSpecialMode,
-      encodeClassicSpecialMode(mode, enabled),
     );
   }
 

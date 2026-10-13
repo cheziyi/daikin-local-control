@@ -48,7 +48,10 @@
     "DESIGN.md",
     "UNSUPPORTED.md"
   ],
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./simulators": "./dist/simulators/index.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc",

@@ -1,4 +1,4 @@
-import { DSIOT_PATHS } from "../../state.js";
+import { DSIOT_PATHS } from "../../tables.js";
 
 /** The full path of a per-mode leaf, such as `p_02`, the cool setpoint. */
 export function modeLeaf(name: string): string {

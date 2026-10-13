@@ -106,9 +106,8 @@ export interface DaikinState {
  * fields to change. The client overlays the control on the state the unit
  * holds, and writes the whole state back. It drops a field the unit does not take in
  * the target mode, such as a louver position outside
- * `DaikinCapabilities.verticalPositions`. It takes no `specialModes`: a
- * classic adapter is set one with `ClassicDaikinClient.setSpecialMode`, and
- * UNSUPPORTED.md says what is not known about the rest. */
+ * `DaikinCapabilities.verticalPositions`. It takes no `specialModes`:
+ * `DaikinClient.setSpecialMode` turns one on or off. */
 export type DaikinControl = Partial<Omit<DaikinState, "specialModes">>;
 
 /** A reading is `null` when the unit does not report it. */

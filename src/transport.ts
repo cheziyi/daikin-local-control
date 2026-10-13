@@ -71,7 +71,8 @@ export interface DaikinTransportOptions {
   host: string;
   /** HTTPS (a Marvell adapter in secure mode). */
   usesHttps?: boolean;
-  /** The terminal uuid, sent as `X-Daikin-uuid` on every call. */
+  /** The terminal uuid, sent as `X-Daikin-uuid` on every call: 32 lowercase
+   * hexadecimal digits, a UUID without its dashes. */
   terminalUuid: string;
   authentication?: DaikinAuthentication;
   /** How long, in milliseconds, to wait for each of the connection, the
@@ -102,9 +103,15 @@ export interface DaikinTlsOptions {
 export class DaikinTransport {
   private readonly origin: string;
   private readonly client: Client;
+  private readonly terminalUuidHeaders: Record<string, string>;
 
-  /** Call `close` when done with the adapter. */
+  /** Call `close` when done with the adapter. It throws an `Error` when
+   * `options.terminalUuid` is not in the form
+   * `DaikinTransportOptions.terminalUuid` describes. */
   constructor(private readonly options: DaikinTransportOptions) {
+    // Before the Client, so a uuid that throws leaves no connection open.
+    this.terminalUuidHeaders = encodeTerminalUuid(options.terminalUuid);
+
     const scheme = options.usesHttps ? "https" : "http";
     this.origin = `${scheme}://${options.host.replace(/\/+$/, "")}`;
 
@@ -137,7 +144,7 @@ export class DaikinTransport {
       .join("&");
 
     const headers: Record<string, string> = {
-      ...encodeTerminalUuid(this.options.terminalUuid),
+      ...this.terminalUuidHeaders,
       ...((await this.options.authentication?.headers()) ?? {}),
       ...(request.jsonBody !== undefined ? JSON_CONTENT_HEADERS : {}),
     };
