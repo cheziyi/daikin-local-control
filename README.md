@@ -90,7 +90,7 @@ such as `1.2.51`, when the adapter reports them: key a stored device on
 | Resolves after `timeoutInMs`, never earlier | Pass `discoverDevices({ timeoutInMs: 1000 })` to wait less than the default 3000 |
 | Broadcasts to `255.255.255.255` | It does not find an adapter on another subnet or VLAN |
 | Keeps the adapters of air conditioners alone | It leaves out the adapter of an air cleaner, a water heater or another appliance, which answers the same broadcast |
-| Asks each classic adapter over HTTP whether it is an Airbase adapter, which replies to the broadcast as a classic one does | It resolves later than `timeoutInMs` while an adapter is slow to answer, by 3000 ms at most for each request, and reports as `classic` one that does not answer |
+| Asks each classic adapter over HTTP whether it is an Airbase adapter, which replies to the broadcast as a classic one does | It resolves later than `timeoutInMs` while an adapter is slow to answer, by 3000 ms at most for each request after up to 750 ms of retrying a dropped connection, and reports as `classic` one that does not answer. An Airbase device requires no registration and no child lock code, whatever the adapter's reply says |
 | Binds the first free UDP port from 30000 to 30050 | Calls made at the same time each get every reply. It rejects with the socket's error when none of the ports is free, or when the socket fails |
 
 Write the device by hand when you already know its address, or when discovery
@@ -106,16 +106,9 @@ const client = createDaikinClient(device, { terminalUuid: savedUuid });
 A device written by hand has no `name`, `macAddress` or `firmwareVersion`: read
 them from the adapter with `await client.getDeviceInfo()`.
 
-When you cannot tell whether an adapter is a classic or an Airbase one, ask it
-as discovery does:
-
-```ts
-import { DaikinTransport, isAirbaseAdapter } from "daikin-local-control";
-
-const transport = new DaikinTransport({ host: "192.168.1.50" });
-const protocol = (await isAirbaseAdapter(transport)) ? "airbase" : "classic";
-await transport.close();
-```
+To tell an Airbase adapter from a classic one by its address, request
+`/common/basic_info`: an Airbase adapter answers HTTP 404 there, and `ret=OK`
+at `/skyfi/common/basic_info`.
 
 Set `protocol` to `dsiot` for a BRP084, to `airbase` for a BRP15B61 and to
 `classic` for every other adapter: `createDaikinClient()` goes by it and asks

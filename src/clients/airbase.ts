@@ -60,13 +60,17 @@ const NOT_FOUND = 404;
 /** Whether the adapter `transport` reaches is an Airbase adapter: one that
  * answers HTTP 404 at `/common/basic_info`, where a classic adapter answers,
  * and `ret=OK` at `/skyfi/common/basic_info`. It sends the second request
- * only after that 404, and resolves with `false` when either request fails
- * any other way. */
+ * only after that 404, and retries a refused or dropped connection as
+ * `withRetry` does by default: an adapter drops one while it answers another
+ * caller. It resolves with `false` when either request fails any other way.
+ * `discoverDevices` calls it, and `src/index.ts` does not export it. */
 export async function isAirbaseAdapter(
   transport: DaikinTransport,
 ): Promise<boolean> {
+  const get = (path: string) =>
+    withRetry(() => transport.send({ method: "GET", path }));
   try {
-    await transport.send({ method: "GET", path: AIRBASE_ROUTES.basicInfo });
+    await get(AIRBASE_ROUTES.basicInfo);
     return false;
   } catch (error) {
     if (!(error instanceof DaikinError) || error.httpStatusCode !== NOT_FOUND) {
@@ -76,10 +80,7 @@ export async function isAirbaseAdapter(
   try {
     return isClassicOk(
       parseClassicKeyValue(
-        await transport.send({
-          method: "GET",
-          path: `${AIRBASE_ROOT}${AIRBASE_ROUTES.basicInfo}`,
-        }),
+        await get(`${AIRBASE_ROOT}${AIRBASE_ROUTES.basicInfo}`),
       ),
     );
   } catch {

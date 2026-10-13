@@ -1,5 +1,5 @@
 export type { DaikinAuthentication } from "./authentication.js";
-export * from "./clients/airbase.js";
+export { AirbaseDaikinClient } from "./clients/airbase.js";
 export * from "./clients/classic.js";
 export * from "./clients/client.js";
 export * from "./clients/dsiot.js";

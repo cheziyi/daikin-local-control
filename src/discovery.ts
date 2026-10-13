@@ -44,8 +44,10 @@ export interface DiscoverDevicesOptions {
  *
  * An Airbase adapter replies as a classic adapter does, so it sends each
  * adapter that replies as one an HTTP request, or two, to tell which it is:
- * see `isAirbaseAdapter`. An adapter that does not answer in 3000 ms is
- * reported as classic.
+ * an Airbase adapter answers HTTP 404 at `/common/basic_info` and `ret=OK`
+ * at `/skyfi/common/basic_info`. An adapter that does not answer in 3000 ms
+ * is reported as classic. An Airbase adapter takes no registration and no
+ * local password, so its device requires neither, whatever its reply says.
  *
  * It resolves once `timeoutInMs` has passed and each of those requests has
  * finished, never earlier, with one device for each `host` that replied: the
@@ -116,8 +118,16 @@ async function identifyProtocol(device: DaikinDevice): Promise<DaikinDevice> {
     timeoutInMs: IDENTIFY_TIMEOUT_IN_MS,
   });
   try {
+    // `parseDevice` read the reply as a classic adapter's, which may require
+    // registration or a local password. An Airbase adapter takes neither.
+    // `usesHttps` stays: the adapter has just answered over that scheme.
     return (await isAirbaseAdapter(transport))
-      ? { ...device, protocol: "airbase" }
+      ? {
+          ...device,
+          protocol: "airbase",
+          requiresRegistration: false,
+          requiresLocalPassword: false,
+        }
       : device;
   } finally {
     await transport.close();

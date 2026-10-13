@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DaikinConnectionError, DaikinError } from "../../error.js";
 import { AirbaseDaikinClient, isAirbaseAdapter } from "../airbase.js";
 import { failingFirst, MockDaikinTransport } from "./mocks/transport.js";
@@ -317,6 +317,10 @@ describe("AirbaseDaikinClient", () => {
 describe("isAirbaseAdapter", () => {
   const notFound = new DaikinError("Not found", 404);
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   // Answers 404 at each path it has no body for.
   function answering(bodies: Record<string, string>): MockDaikinTransport {
     return new MockDaikinTransport(({ path }) => {
@@ -345,11 +349,10 @@ describe("isAirbaseAdapter", () => {
     expect(transport.sent).toHaveLength(1);
   });
 
-  it("passes no adapter that rejects the first request another way", async () => {
+  it("passes no adapter that rejects the first request another way, and asks it once", async () => {
     for (const error of [
       new DaikinError("Forbidden", 403),
       new DaikinError("Timed out", 504),
-      new DaikinConnectionError("refused"),
     ]) {
       const transport = new MockDaikinTransport(() => {
         throw error;
@@ -358,6 +361,49 @@ describe("isAirbaseAdapter", () => {
       expect(await isAirbaseAdapter(transport.asTransport())).toBe(false);
       expect(transport.sent).toHaveLength(1);
     }
+  });
+
+  it("asks again after a dropped connection, at either path", async () => {
+    const dropped = new DaikinConnectionError("closed");
+    let skyfiFailures = 1;
+    const airbase = new MockDaikinTransport(
+      failingFirst(1, dropped, ({ path }) => {
+        if (path !== BASIC_INFO) {
+          throw notFound;
+        }
+        if (skyfiFailures > 0) {
+          skyfiFailures -= 1;
+          throw dropped;
+        }
+        return "ret=OK,type=aircon";
+      }),
+    );
+    const classic = new MockDaikinTransport(
+      failingFirst(1, dropped, () => "ret=OK,type=aircon"),
+    );
+
+    expect(await isAirbaseAdapter(airbase.asTransport())).toBe(true);
+    expect(await isAirbaseAdapter(classic.asTransport())).toBe(false);
+    expect(airbase.sent.map(({ path }) => path)).toEqual([
+      "/common/basic_info",
+      "/common/basic_info",
+      BASIC_INFO,
+      BASIC_INFO,
+    ]);
+    expect(classic.sent).toHaveLength(2);
+  });
+
+  it("passes no adapter that keeps dropping the connection, after five retries", async () => {
+    vi.useFakeTimers();
+    const transport = new MockDaikinTransport(() => {
+      throw new DaikinConnectionError("refused");
+    });
+
+    const identified = isAirbaseAdapter(transport.asTransport());
+    await vi.runAllTimersAsync();
+
+    expect(await identified).toBe(false);
+    expect(transport.sent).toHaveLength(6);
   });
 
   it("passes no adapter that answers 404 at both paths, or a ret other than OK", async () => {

@@ -265,6 +265,28 @@ describe("discoverDevices", () => {
       ]);
     });
 
+    it("requires no registration and no local password of an Airbase adapter, whatever its reply says", async () => {
+      isAirbaseAdapter.mockResolvedValue(true);
+      const discovery = discoverDevices();
+      await vi.advanceTimersByTimeAsync(0);
+      socket.receive(
+        "192.168.1.60",
+        "ret=OK,type=aircon,adp_kind=3,en_secure=1,lpw_flag=1",
+      );
+      await vi.runAllTimersAsync();
+
+      expect(await discovery).toEqual([
+        {
+          host: "192.168.1.60",
+          protocol: "airbase",
+          requiresRegistration: false,
+          requiresLocalPassword: false,
+          // The adapter answered over HTTPS, so the client uses it too.
+          usesHttps: true,
+        },
+      ]);
+    });
+
     it("asks at the adapter's host and scheme, waits 3000 ms, and closes the connection", async () => {
       const discovery = discoverDevices();
       await vi.advanceTimersByTimeAsync(0);
