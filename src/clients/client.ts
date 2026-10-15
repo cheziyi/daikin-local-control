@@ -44,6 +44,7 @@ export interface DaikinClient extends AsyncDisposable {
   getStateAndSensors(): Promise<DaikinStateAndSensors>;
 
   /** Close the connection to the adapter. `await using` calls it at the end of
-   * the scope. */
+   * the scope. After it, every other method rejects with an `Error` without
+   * sending, and a second call resolves once the first has closed it. */
   dispose(): Promise<void>;
 }
