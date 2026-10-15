@@ -208,6 +208,34 @@ describe("DaikinTransport", () => {
       expect(error).not.toBeInstanceOf(DaikinConnectionError);
       expect(error).toMatchObject({ httpStatusCode: 504 });
     });
+
+    it("throws an Error without sending once disposed", async () => {
+      const adapter = await startMockAdapter("ret=OK");
+      const transport = transportTo({ host: adapter.host });
+      await transport.dispose();
+
+      const error = await transport
+        .send(BASIC_INFO)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(DaikinError);
+      expect(error).toMatchObject({
+        message:
+          "Daikin request to /common/basic_info was not sent: the connection was disposed",
+      });
+      expect(adapter.received).toHaveLength(0);
+    });
+  });
+
+  describe("dispose", () => {
+    it("resolves when called a second time", async () => {
+      const transport = transportTo({ host: "192.0.2.1" });
+
+      await transport.dispose();
+
+      await expect(transport.dispose()).resolves.toBeUndefined();
+    });
   });
 
   describe("send over HTTPS", () => {

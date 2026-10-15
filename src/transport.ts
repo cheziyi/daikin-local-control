@@ -105,6 +105,7 @@ export class DaikinTransport {
   private readonly origin: string;
   private readonly client: Client;
   private readonly terminalUuidHeaders: Record<string, string>;
+  private disposal: Promise<void> | undefined;
 
   /** Call `dispose` when done with the adapter. It throws an `Error` when
    * `options.terminalUuid` is not in the form
@@ -134,8 +135,14 @@ export class DaikinTransport {
    * closes the connection, and a `DaikinError` with status 504 when the
    * request fails to complete any other way, such as a timeout or a TLS
    * error. A reply whose status is not 2xx makes it throw a `DaikinError`
-   * with that status. */
+   * with that status. Once `dispose` has been called, it throws an `Error`
+   * without sending. */
   async send(request: DaikinRequest): Promise<string> {
+    if (this.disposal !== undefined) {
+      throw new Error(
+        `Daikin request to ${request.path} was not sent: the connection was disposed`,
+      );
+    }
     const authenticationQuery =
       (await this.options.authentication?.query()) ?? {};
     // Not URLSearchParams: it writes a space as `+`, and the adapter expects
@@ -190,9 +197,10 @@ export class DaikinTransport {
   }
 
   /** Close the connection to the adapter. `await using` calls it at the end of
-   * the scope. */
+   * the scope. A second call resolves once the first has closed it. */
   async dispose(): Promise<void> {
-    await this.client.close();
+    this.disposal ??= this.client.close();
+    await this.disposal;
   }
 
   [Symbol.asyncDispose](): Promise<void> {
