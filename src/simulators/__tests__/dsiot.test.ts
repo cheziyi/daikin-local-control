@@ -34,7 +34,7 @@ const simulators: DsiotDaikinSimulator[] = [];
 const clients: DsiotDaikinClient[] = [];
 
 afterEach(async () => {
-  await Promise.all(clients.splice(0).map((client) => client.close()));
+  await Promise.all(clients.splice(0).map((client) => client.dispose()));
   await Promise.all(simulators.splice(0).map((simulator) => simulator.stop()));
 });
 

@@ -5,7 +5,7 @@ import { discoverDevices } from "../discovery.js";
 const createSocket = vi.hoisted(() => vi.fn());
 const isAirbaseAdapter = vi.hoisted(() => vi.fn());
 const transports = vi.hoisted(
-  () => [] as { options: unknown; close: ReturnType<typeof vi.fn> }[],
+  () => [] as { options: unknown; dispose: ReturnType<typeof vi.fn> }[],
 );
 
 // `discoverDevices` binds a UDP port and broadcasts to the whole LAN, so the
@@ -16,7 +16,7 @@ vi.mock("node:dgram", () => ({ createSocket }));
 vi.mock("../clients/airbase.js", () => ({ isAirbaseAdapter }));
 vi.mock("../transport.js", () => ({
   DaikinTransport: class {
-    readonly close = vi.fn(async () => {});
+    readonly dispose = vi.fn(async () => {});
 
     constructor(readonly options: unknown) {
       transports.push(this);
@@ -300,7 +300,7 @@ describe("discoverDevices", () => {
       expect(transports.map(({ options }) => options)).toEqual([
         { host: "192.168.1.50:8443", usesHttps: true, timeoutInMs: 3000 },
       ]);
-      expect(transports[0]?.close).toHaveBeenCalledTimes(1);
+      expect(transports[0]?.dispose).toHaveBeenCalledTimes(1);
     });
 
     it("asks an adapter once, however often it replies", async () => {

@@ -43,7 +43,7 @@ const DSIOT_ROUTES = {
 export class DsiotDaikinClient implements DaikinClient {
   private readonly setStateCache: SetStateCache;
 
-  /** `close` closes `transport`, so give each client a transport of its own.
+  /** `dispose` closes `transport`, so give each client a transport of its own.
    * `maxStateAgeForSetStateInMs` defaults to 0: see
    * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   constructor(
@@ -54,8 +54,12 @@ export class DsiotDaikinClient implements DaikinClient {
     this.setStateCache = new SetStateCache(maxStateAgeForSetStateInMs);
   }
 
-  close(): Promise<void> {
-    return this.transport.close();
+  dispose(): Promise<void> {
+    return this.transport.dispose();
+  }
+
+  [Symbol.asyncDispose](): Promise<void> {
+    return this.dispose();
   }
 
   async getDeviceInfo(): Promise<DaikinDeviceInfo> {

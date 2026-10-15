@@ -106,7 +106,7 @@ export class DaikinTransport {
   private readonly client: Client;
   private readonly terminalUuidHeaders: Record<string, string>;
 
-  /** Call `close` when done with the adapter. It throws an `Error` when
+  /** Call `dispose` when done with the adapter. It throws an `Error` when
    * `options.terminalUuid` is not in the form
    * `DaikinTransportOptions.terminalUuid` describes. */
   constructor(private readonly options: DaikinTransportOptions) {
@@ -189,9 +189,14 @@ export class DaikinTransport {
     return text;
   }
 
-  /** Close the connection to the adapter. */
-  async close(): Promise<void> {
+  /** Close the connection to the adapter. `await using` calls it at the end of
+   * the scope. */
+  async dispose(): Promise<void> {
     await this.client.close();
+  }
+
+  [Symbol.asyncDispose](): Promise<void> {
+    return this.dispose();
   }
 }
 

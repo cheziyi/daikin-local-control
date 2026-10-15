@@ -17,7 +17,9 @@ import {
 const transports: DaikinTransport[] = [];
 
 afterEach(async () => {
-  await Promise.all(transports.splice(0).map((transport) => transport.close()));
+  await Promise.all(
+    transports.splice(0).map((transport) => transport.dispose()),
+  );
   await stopMockAdapters();
 });
 
