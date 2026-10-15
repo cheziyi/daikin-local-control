@@ -223,6 +223,10 @@ given, whether or not the unit lists it.
 An Airbase adapter also drops every `targetHumidity`, and a
 `targetTemperatureInC` in `fan` as well as in `dehumidify`.
 
+`setState()` rounds `targetTemperatureInC` to the nearest step the adapter
+takes: a whole degree on a classic adapter, so 23.5 is sent as 24, and half a
+degree on a DSIOT adapter, so 23.3 is sent as 23.5.
+
 `setState()` takes no `specialModes`: turn one on or off with
 `setSpecialMode()`, which sends a request of its own. Check the mode against
 `getCapabilities().specialModes` first: the client sends any mode as given.

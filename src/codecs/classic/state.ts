@@ -117,8 +117,8 @@ export function parseClassicSensors(
  * `dfd` and, for the louvers, `ndfd`. `capabilityFields`, the field map of
  * `mergeClassicCapabilityFields`, says which fields the unit takes: `shum`
  * unless it is `subtype=qa`, `f_dir_ud` and `f_dir_lr` on a 3D unit
- * (`en_fdir2`), and `f_dir` on a unit that takes a direction. It drops a
- * `targetTemperatureInC` in dehumidify, writes `mode=0` and `mode=7` as
+ * (`en_fdir2`), and `f_dir` on a unit that takes a direction. It rounds a
+ * `targetTemperatureInC` to the whole degree and drops one in dehumidify, writes `mode=0` and `mode=7` as
  * `mode=1`, and never echoes `ret`, `adv` or the other modes' memory. */
 export function applyClassicControl(
   current: Record<string, string>,
@@ -153,7 +153,7 @@ export function applyClassicControl(
     ? CLASSIC_NO_SETPOINT
     : control.targetTemperatureInC != null &&
         mode !== CLASSIC_OPERATING_MODE_CODES.dehumidify
-      ? control.targetTemperatureInC.toFixed(1)
+      ? Math.round(control.targetTemperatureInC).toFixed(1)
       : remembered("stemp", "dt");
   if (hasMemory) {
     next[`dt${mode}`] = next.stemp;

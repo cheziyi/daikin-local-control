@@ -252,11 +252,18 @@ describe("applyClassicControl", () => {
     ).toBe("0");
   });
 
-  it("writes the setpoint to one decimal place, in stemp and the mode's memory", () => {
-    expect(
-      applyClassicControl(HEATING, { targetTemperatureInC: 23.5 }, NO_AIRFLOW),
-    ).toMatchObject({ stemp: "23.5", dt4: "23.5" });
-  });
+  it.each([
+    [23, "23.0"],
+    [23.4, "23.0"],
+    [23.5, "24.0"],
+  ])(
+    "writes the setpoint %s as %s, in stemp and the mode's memory",
+    (targetTemperatureInC, stemp) => {
+      expect(
+        applyClassicControl(HEATING, { targetTemperatureInC }, NO_AIRFLOW),
+      ).toMatchObject({ stemp, dt4: stemp });
+    },
+  );
 
   it("writes the humidity setting in shum and the mode's memory", () => {
     expect(
