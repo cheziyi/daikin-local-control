@@ -47,8 +47,8 @@ export interface CreateDaikinClientOptions {
  * HTTPS when `device.usesHttps` is set, and sends the local password when
  * `options.localPassword` is given. It throws an `Error` when
  * `options.terminalUuid` is not in the form
- * `CreateDaikinClientOptions.terminalUuid` describes. Call `close` on the
- * client when done with the unit. */
+ * `CreateDaikinClientOptions.terminalUuid` describes. Call `dispose` on
+ * the client when done with the unit, or create it with `await using`. */
 export function createDaikinClient(
   device: DaikinDevice,
   options: CreateDaikinClientOptions,

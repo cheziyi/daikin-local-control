@@ -5,10 +5,10 @@ export type MockReply = (request: DaikinRequest) => string | Promise<string>;
 /** Answers each request with `reply`, which may throw, and records what was
  * sent. */
 export class MockDaikinTransport
-  implements Pick<DaikinTransport, "send" | "close">
+  implements Pick<DaikinTransport, "send" | "dispose">
 {
   readonly sent: DaikinRequest[] = [];
-  closed = false;
+  disposed = false;
 
   constructor(private readonly reply: MockReply) {}
 
@@ -17,8 +17,8 @@ export class MockDaikinTransport
     return this.reply(request);
   }
 
-  async close(): Promise<void> {
-    this.closed = true;
+  async dispose(): Promise<void> {
+    this.disposed = true;
   }
 
   // DaikinTransport has private fields, so no mock is structurally assignable

@@ -308,9 +308,19 @@ describe("AirbaseDaikinClient", () => {
   it("closes its transport", async () => {
     const transport = adapter(UNIT);
 
-    await airbaseClient(transport).close();
+    await airbaseClient(transport).dispose();
 
-    expect(transport.closed).toBe(true);
+    expect(transport.disposed).toBe(true);
+  });
+
+  it("closes its transport at the end of an `await using` scope", async () => {
+    const transport = adapter(UNIT);
+
+    {
+      await using _client = airbaseClient(transport);
+    }
+
+    expect(transport.disposed).toBe(true);
   });
 });
 

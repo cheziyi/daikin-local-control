@@ -73,8 +73,9 @@ await client.setState({ power: true, mode: "cool", targetTemperatureInC: 24 });
 
 const { indoorTemperatureInC } = await client.getSensors();
 
-// 5. Close the connection to the adapter when you're done with the unit.
-await client.close();
+// 5. Close the connection to the adapter when you're done with the unit, or
+//    create the client with `await using` to have the scope's end do it.
+await client.dispose();
 ```
 
 ### Discovery
@@ -388,7 +389,7 @@ await client.getState(); // power: true, mode: "cool", targetTemperatureInC: 22
 simulator.setState({ power: false }); // someone uses the remote control
 simulator.setSensors({ indoorTemperatureInC: 24 }); // the room cools down
 
-await client.close();
+await client.dispose();
 await simulator.stop();
 ```
 

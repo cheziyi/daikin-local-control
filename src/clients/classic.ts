@@ -85,7 +85,7 @@ export class ClassicDaikinClient implements DaikinClient {
   private capabilityFields: Promise<Record<string, string>> | undefined;
   private readonly setStateCache: SetStateCache;
 
-  /** `close` closes `transport`, so give each client a transport of its own.
+  /** `dispose` closes `transport`, so give each client a transport of its own.
    * `maxStateAgeForSetStateInMs` defaults to 0: see
    * `CreateDaikinClientOptions.maxStateAgeForSetStateInMs`. */
   constructor(
@@ -96,8 +96,12 @@ export class ClassicDaikinClient implements DaikinClient {
     this.setStateCache = new SetStateCache(maxStateAgeForSetStateInMs);
   }
 
-  close(): Promise<void> {
-    return this.transport.close();
+  dispose(): Promise<void> {
+    return this.transport.dispose();
+  }
+
+  [Symbol.asyncDispose](): Promise<void> {
+    return this.dispose();
   }
 
   async getDeviceInfo(): Promise<DaikinDeviceInfo> {

@@ -130,7 +130,7 @@ async function identifyProtocol(device: DaikinDevice): Promise<DaikinDevice> {
         }
       : device;
   } finally {
-    await transport.close();
+    await transport.dispose();
   }
 }
 

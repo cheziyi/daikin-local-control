@@ -718,13 +718,23 @@ describe("ClassicDaikinClient", () => {
     });
   });
 
-  describe("close", () => {
+  describe("dispose", () => {
     it("closes its transport", async () => {
       const transport = adapter({});
 
-      await classicClient(transport).close();
+      await classicClient(transport).dispose();
 
-      expect(transport.closed).toBe(true);
+      expect(transport.disposed).toBe(true);
+    });
+
+    it("closes its transport at the end of an `await using` scope", async () => {
+      const transport = adapter({});
+
+      {
+        await using _client = classicClient(transport);
+      }
+
+      expect(transport.disposed).toBe(true);
     });
   });
 });

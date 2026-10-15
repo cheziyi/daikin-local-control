@@ -13,7 +13,7 @@ import type {
  * needs the concrete class only for what one protocol adds, such as
  * `ClassicDaikinClient.registerTerminal`. Every method rejects with a
  * `DaikinError` when its request fails. */
-export interface DaikinClient {
+export interface DaikinClient extends AsyncDisposable {
   /** The adapter's name, MAC address and firmware version. */
   getDeviceInfo(): Promise<DaikinDeviceInfo>;
 
@@ -43,6 +43,7 @@ export interface DaikinClient {
    * twice. A classic or an Airbase adapter takes one request for each. */
   getStateAndSensors(): Promise<DaikinStateAndSensors>;
 
-  /** Close the connection to the adapter. */
-  close(): Promise<void>;
+  /** Close the connection to the adapter. `await using` calls it at the end of
+   * the scope. */
+  dispose(): Promise<void>;
 }

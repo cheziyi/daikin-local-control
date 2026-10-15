@@ -15,7 +15,7 @@ import { startMockAdapter, stopMockAdapters } from "./mocks/adapter.js";
 const clients: DaikinClient[] = [];
 
 afterEach(async () => {
-  await Promise.all(clients.splice(0).map((client) => client.close()));
+  await Promise.all(clients.splice(0).map((client) => client.dispose()));
   await stopMockAdapters();
 });
 
