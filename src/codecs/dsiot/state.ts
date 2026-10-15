@@ -74,7 +74,7 @@ export function decodeDsiotLittleEndian(pv: string): number {
 }
 
 export function encodeDsiotSetpoint(setpointInC: number): string {
-  return (Math.trunc(setpointInC * 2) & 0xff).toString(16);
+  return (Math.round(setpointInC * 2) & 0xff).toString(16);
 }
 
 export function decodeDsiotSetpoint(

@@ -73,6 +73,13 @@ describe("DSIOT value encodings", () => {
     expect(encodeDsiotSetpoint(24.5)).toBe("31");
   });
 
+  it("rounds a setpoint to the nearest half degree", () => {
+    expect(encodeDsiotSetpoint(24.2)).toBe("30");
+    expect(encodeDsiotSetpoint(24.3)).toBe("31");
+    expect(encodeDsiotSetpoint(24.499999)).toBe("31");
+    expect(encodeDsiotSetpoint(24.8)).toBe("32");
+  });
+
   it("writes a setpoint in lower case, without padding", () => {
     expect(encodeDsiotSetpoint(22)).toBe("2c");
     expect(encodeDsiotSetpoint(5)).toBe("a");
