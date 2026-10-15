@@ -88,7 +88,7 @@ describe("parseClassicState", () => {
     ["0", "off"],
     ["1", "vertical"],
     ["2", "horizontal"],
-    ["3", "both"],
+    ["3", "3d"],
   ])("reads f_dir=%s as %s", (f_dir, expected) => {
     expect(parseClassicState({ f_dir }).swingMode).toBe(expected);
   });
@@ -458,7 +458,7 @@ describe("applyClassicControl", () => {
       ["off", "0"],
       ["vertical", "1"],
       ["horizontal", "2"],
-      ["both", "3"],
+      ["3d", "3"],
     ] as const)("writes the %s swing mode as f_dir=%s", (swingMode, f_dir) => {
       const query = applyClassicControl(HEATING, { swingMode }, DIRECTION);
 
@@ -493,9 +493,9 @@ describe("applyClassicControl", () => {
       ).toMatchObject({ f_dir: "1", f_dir_ud: "S", f_dir_lr: "0" });
     });
 
-    it("swings both louvers for the both swing mode", () => {
+    it("swings both louvers for the 3d swing mode", () => {
       expect(
-        applyClassicControl(SWINGING_VERTICAL, { swingMode: "both" }, THREE_D),
+        applyClassicControl(SWINGING_VERTICAL, { swingMode: "3d" }, THREE_D),
       ).toMatchObject({ f_dir: "3", f_dir_ud: "S", f_dir_lr: "S" });
     });
 
@@ -529,7 +529,7 @@ describe("applyClassicControl", () => {
       expect(
         applyClassicControl(
           SWINGING_VERTICAL,
-          { swingMode: "both", verticalPosition: "position2" },
+          { swingMode: "3d", verticalPosition: "position2" },
           THREE_D,
         ),
       ).toMatchObject({ f_dir: "2", f_dir_ud: "2", f_dir_lr: "S" });
@@ -636,7 +636,7 @@ describe("applyClassicControl", () => {
     it("writes the louvers without f_dir to a unit that takes no f_dir", () => {
       const query = applyClassicControl(
         SWINGING_VERTICAL,
-        { swingMode: "both" },
+        { swingMode: "3d" },
         { ...NO_AIRFLOW, en_fdir2: "1" },
       );
 

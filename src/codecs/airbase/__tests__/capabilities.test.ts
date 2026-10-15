@@ -46,7 +46,7 @@ describe("parseAirbaseCapabilities", () => {
     expect(parseAirbaseCapabilities(UNZONED)).toEqual({
       modes: ["auto", "dehumidify", "cool", "heat", "fan"],
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
       verticalPositions: [],
       horizontalPositions: [],
       targetTemperaturesInC: {
@@ -113,7 +113,7 @@ describe("parseAirbaseCapabilities", () => {
       parseAirbaseCapabilities({ ...UNZONED, en_zone: "0" }),
     ).toMatchObject({
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
     });
   });
 

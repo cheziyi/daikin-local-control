@@ -63,7 +63,7 @@ const client = createDaikinClient(device, {
 
 // 3. Capabilities are data — branch on them, don't special-case device types.
 const capabilities = await client.getCapabilities();
-if (capabilities.swingModes.includes("both")) {
+if (capabilities.swingModes.includes("3d")) {
   /* this unit swings on both axes */
 }
 
@@ -179,7 +179,7 @@ label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPasswo
 | `targetTemperatureInC` | A number, or `null` in a mode without a setpoint |
 | `targetHumidity` | `off`, `autoLow`, `auto`, `autoHigh` or `continuous`, or `null` when the unit has no humidity setting. A Japanese unit set to a percentage reads as `{ percent: 50 }`; `getCapabilities()` never lists a percentage, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `fanSpeed` | `auto`, `silent`, or `level1` to `level5` |
-| `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
+| `swingMode` | `off`, `vertical`, `horizontal` or `3d`: `vertical` moves the air up and down, `horizontal` left and right, `3d` both |
 | `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto` or `floorWarming`, or `null` where the unit reports none |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
 | `specialModes` | Those of `powerful`, `econo` and `streamer` that are on, empty when none is |
@@ -408,7 +408,7 @@ Describe the adapter and its unit in the types the clients resolve with:
 | `coolingOnly` | `true` for a unit that offers dehumidify, cool and fan alone | `false` |
 | `fan` | `false` for a unit whose fan speed cannot be set | `true` |
 | `fanLevels` | 2, 3 or 5 fan levels. Classic simulator only | 5 |
-| `swing` | `none`, `vertical` or `both` | `both` |
+| `swing` | `none`, `vertical` or `3d` | `3d` |
 | `specialModes` | Those of `powerful`, `econo` and `streamer` the unit takes | All three |
 | `coolTemperaturesInC`, `heatTemperaturesInC` | `{ min, max }` | 18 to 32 and 10 to 30 |
 

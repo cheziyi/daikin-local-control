@@ -450,7 +450,7 @@ describe("DsiotDaikinClient against the simulator", () => {
         "level4",
         "level5",
       ],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
       verticalPositions: [
         "stop",
         "position1",
@@ -551,7 +551,7 @@ describe("DsiotDaikinClient against the simulator", () => {
     const client = clientFor(simulator);
     await client.setState({ targetTemperatureInC: 22, fanSpeed: "silent" });
 
-    await client.setState({ mode: "heat", swingMode: "both" });
+    await client.setState({ mode: "heat", swingMode: "3d" });
     const heat = await client.getState();
     await client.setState({ mode: "cool" });
     const cool = await client.getState();
@@ -560,7 +560,7 @@ describe("DsiotDaikinClient against the simulator", () => {
       mode: "heat",
       targetTemperatureInC: 25,
       fanSpeed: "auto",
-      swingMode: "both",
+      swingMode: "3d",
     });
     expect(cool).toMatchObject({
       mode: "cool",

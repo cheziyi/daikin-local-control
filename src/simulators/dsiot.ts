@@ -545,8 +545,8 @@ function applyState(leaves: Leaves, state: Partial<DaikinState>): void {
   }
   if (swingMode != null) {
     const swings = {
-      vertical: swingMode === "vertical" || swingMode === "both",
-      horizontal: swingMode === "horizontal" || swingMode === "both",
+      vertical: swingMode === "vertical" || swingMode === "3d",
+      horizontal: swingMode === "horizontal" || swingMode === "3d",
     };
     for (const axis of ["vertical", "horizontal"] as const) {
       const address = addresses[axis];

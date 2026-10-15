@@ -23,10 +23,11 @@ export const FAN_SPEEDS = [
 
 export type FanSpeed = (typeof FAN_SPEEDS)[number];
 
-export const SWING_MODES = ["off", "vertical", "horizontal", "both"] as const;
+export const SWING_MODES = ["off", "vertical", "horizontal", "3d"] as const;
 
-/** The axes the louvers swing on: `vertical` moves the air up and down, and
- * `horizontal` moves it left and right. A 3D unit, one with 3D airflow, also
+/** The axes the louvers swing on: `vertical` moves the air up and down,
+ * `horizontal` moves it left and right, and `3d` does both. A 3D unit, one
+ * with 3D airflow, also
  * reports each axis on its own, as `DaikinState.verticalPosition` and
  * `DaikinState.horizontalPosition`. */
 export type SwingMode = (typeof SWING_MODES)[number];

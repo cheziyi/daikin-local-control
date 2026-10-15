@@ -390,7 +390,7 @@ describe("DsiotDaikinClient", () => {
         "off",
         "vertical",
         "horizontal",
-        "both",
+        "3d",
       ]);
     });
   });

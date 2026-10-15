@@ -190,9 +190,9 @@ export function applyClassicControl(
       CLASSIC_LOUVER_STOP;
     if (control.swingMode !== undefined) {
       const swingsVertically =
-        control.swingMode === "vertical" || control.swingMode === "both";
+        control.swingMode === "vertical" || control.swingMode === "3d";
       const swingsHorizontally =
-        control.swingMode === "horizontal" || control.swingMode === "both";
+        control.swingMode === "horizontal" || control.swingMode === "3d";
       vertical = swingsVertically
         ? CLASSIC_LOUVER_SWING
         : vertical === CLASSIC_LOUVER_SWING

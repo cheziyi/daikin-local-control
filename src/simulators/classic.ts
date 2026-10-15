@@ -141,7 +141,7 @@ const NO_READING = "-";
 // `type` in `get_model_info` on a heat pump.
 const HEAT_PUMP_TYPE = "N";
 // `s_fdir`: the axes the louvers swing on.
-const SWING_AXES_CODES = { none: "0", vertical: "1", both: "3" } as const;
+const SWING_AXES_CODES = { none: "0", vertical: "1", "3d": "3" } as const;
 
 /** What a simulated classic unit has. */
 export interface ClassicSimulatorUnit extends DaikinSimulatorUnit {
@@ -510,8 +510,8 @@ function applyState(
   }
   if (state.swingMode != null) {
     const swings = {
-      f_dir_ud: state.swingMode === "vertical" || state.swingMode === "both",
-      f_dir_lr: state.swingMode === "horizontal" || state.swingMode === "both",
+      f_dir_ud: state.swingMode === "vertical" || state.swingMode === "3d",
+      f_dir_lr: state.swingMode === "horizontal" || state.swingMode === "3d",
     };
     if (hasLouvers) {
       // An axis that stops swinging stops, and one at a fixed position

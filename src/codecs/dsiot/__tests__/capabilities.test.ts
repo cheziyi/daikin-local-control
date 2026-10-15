@@ -42,7 +42,7 @@ describe("parseDsiotCapabilities", () => {
         "level4",
         "level5",
       ],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
       verticalPositions: ["stop", "swing"],
       horizontalPositions: ["stop"],
       targetTemperaturesInC: {

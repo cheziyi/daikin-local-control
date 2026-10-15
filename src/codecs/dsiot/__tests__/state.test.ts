@@ -263,7 +263,7 @@ describe("parseDsiotState", () => {
     ["000000", "000000", "off"],
     ["0F0000", "000000", "vertical"],
     ["000000", "0F0000", "horizontal"],
-    ["0F0000", "0F0000", "both"],
+    ["0F0000", "0F0000", "3d"],
   ])(
     "reads vertical %s with horizontal %s as the %s swing mode",
     (vertical, horizontal, expected) => {
@@ -471,7 +471,7 @@ describe("applyDsiotControl", () => {
           power: true,
           targetTemperatureInC: 22,
           fanSpeed: "level3",
-          swingMode: "both",
+          swingMode: "3d",
         }),
       ).toEqual([
         { path: DSIOT_PATHS.power, value: "01" },
@@ -722,7 +722,7 @@ describe("applyDsiotControl", () => {
       ["off", "000000", "000000"],
       ["vertical", "0F0000", "000000"],
       ["horizontal", "000000", "0F0000"],
-      ["both", "0F0000", "0F0000"],
+      ["3d", "0F0000", "0F0000"],
     ] as const)(
       "writes %s as vertical %s and horizontal %s",
       (swingMode, vertical, horizontal) => {
@@ -847,7 +847,7 @@ describe("applyDsiotControl", () => {
       expect(
         leaves(
           applyDsiotControl(louvered, {
-            swingMode: "both",
+            swingMode: "3d",
             verticalPosition: "position1",
           }),
         ),

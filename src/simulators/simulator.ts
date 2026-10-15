@@ -70,8 +70,8 @@ export interface DaikinSimulatorUnit {
   /** Whether the fan speed can be set. Defaults to true. */
   fan?: boolean;
   /** The axes the louvers swing on: `vertical` moves the air up and down
-   * alone, and `both` left and right as well. Defaults to `both`. */
-  swing?: "none" | "vertical" | "both";
+   * alone, and `3d` left and right as well. Defaults to `3d`. */
+  swing?: "none" | "vertical" | "3d";
   /** The special modes the unit takes. Defaults to all three. */
   specialModes?: readonly SpecialMode[];
   /** The setpoints cool takes. A classic adapter reports whole degrees.

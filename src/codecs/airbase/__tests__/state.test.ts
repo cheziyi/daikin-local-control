@@ -78,7 +78,7 @@ describe("parseAirbaseState", () => {
       "off",
       "vertical",
       "horizontal",
-      "both",
+      "3d",
     ]);
   });
 
@@ -177,7 +177,7 @@ describe("applyAirbaseControl", () => {
         mode: "heat",
         targetTemperatureInC: 19,
         fanSpeed: "level1",
-        swingMode: "both",
+        swingMode: "3d",
       }),
     ).toMatchObject({
       mode: "1",

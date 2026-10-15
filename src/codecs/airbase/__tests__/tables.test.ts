@@ -26,7 +26,7 @@ describe("the Airbase tables", () => {
         off: "0",
         vertical: "1",
         horizontal: "2",
-        both: "3",
+        "3d": "3",
       },
       AIRBASE_NO_SETPOINT: "--",
     });

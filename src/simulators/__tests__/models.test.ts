@@ -168,13 +168,13 @@ describe.each([
       const { simulator, client } = await unitWith({});
 
       await client.setState({ power: true, targetTemperatureInC: 20 });
-      simulator.setState({ swingMode: "both" });
+      simulator.setState({ swingMode: "3d" });
       await client.setSpecialMode("powerful", true);
 
       expect(await client.getState()).toMatchObject({
         power: true,
         targetTemperatureInC: 20,
-        swingMode: "both",
+        swingMode: "3d",
         specialModes: ["powerful"],
       });
     });
@@ -235,7 +235,7 @@ describe.each([
     it.each([
       ["none", []],
       ["vertical", ["off", "vertical"]],
-      ["both", ["off", "vertical", "horizontal", "both"]],
+      ["3d", ["off", "vertical", "horizontal", "3d"]],
     ] as const)("swings on %s", async (swing, swingModes) => {
       const { client } = await unitWith({ unit: { swing } });
 

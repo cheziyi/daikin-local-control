@@ -211,7 +211,7 @@ describe("parseClassicCapabilities", () => {
       expect(
         parseClassicCapabilities({ ...BASE, en_fdir: "1", s_fdir: "3" })
           .swingModes,
-      ).toEqual(["off", "vertical", "horizontal", "both"]);
+      ).toEqual(["off", "vertical", "horizontal", "3d"]);
       expect(
         parseClassicCapabilities({ ...BASE, en_fdir: "1", s_fdir: "1" })
           .swingModes,
@@ -236,7 +236,7 @@ describe("parseClassicCapabilities", () => {
 
       expect(
         parseClassicCapabilities({ ...old, s_fdir: "3" }).swingModes,
-      ).toEqual(["off", "vertical", "horizontal", "both"]);
+      ).toEqual(["off", "vertical", "horizontal", "3d"]);
       expect(
         parseClassicCapabilities({ ...old, s_fdir: "1" }).swingModes,
       ).toEqual(["off", "vertical"]);
@@ -260,7 +260,7 @@ describe("parseClassicCapabilities", () => {
     it("offers both axes on a 3D unit that takes no f_dir", () => {
       expect(
         parseClassicCapabilities({ ...BASE, en_fdir2: "1" }).swingModes,
-      ).toEqual(["off", "vertical", "horizontal", "both"]);
+      ).toEqual(["off", "vertical", "horizontal", "3d"]);
     });
   });
 

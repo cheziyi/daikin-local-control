@@ -448,9 +448,9 @@ export function applyDsiotControl(
   let horizontal: string | undefined;
   if (control.swingMode !== undefined) {
     const swingsVertically =
-      control.swingMode === "vertical" || control.swingMode === "both";
+      control.swingMode === "vertical" || control.swingMode === "3d";
     const swingsHorizontally =
-      control.swingMode === "horizontal" || control.swingMode === "both";
+      control.swingMode === "horizontal" || control.swingMode === "3d";
     vertical = louver(swingsVertically, values[paths.vertical]);
     horizontal = louver(swingsHorizontally, values[paths.horizontal]);
   }
@@ -502,7 +502,7 @@ function decodeSwing(
   const swingsVertically = isDsiotLouverSwinging(vertical);
   const swingsHorizontally = isDsiotLouverSwinging(horizontal);
   if (swingsVertically && swingsHorizontally) {
-    return "both";
+    return "3d";
   }
   return swingsVertically
     ? "vertical"

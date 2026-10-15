@@ -424,7 +424,7 @@ describe("ClassicDaikinClient against the simulator", () => {
         "level4",
         "level5",
       ],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
       verticalPositions: [],
       horizontalPositions: [],
       targetTemperaturesInC: {

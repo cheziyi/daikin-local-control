@@ -330,7 +330,7 @@ describe("AirbaseDaikinClient against the simulator", () => {
     expect(await clientFor(simulator).getCapabilities()).toMatchObject({
       modes: ["auto", "dehumidify", "cool", "heat", "fan"],
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: ["off", "vertical", "horizontal", "3d"],
       targetTemperaturesInC: {
         cool: { min: 18, max: 32, step: 1 },
         heat: { min: 10, max: 30, step: 1 },

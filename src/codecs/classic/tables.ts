@@ -34,7 +34,7 @@ export const CLASSIC_SWING_MODE_CODES: Record<SwingMode, string> = {
   off: "0",
   vertical: "1",
   horizontal: "2",
-  both: "3",
+  "3d": "3",
 };
 
 // `f_dir_ud` and `f_dir_lr` carry a digit for stop and each fixed position, and

@@ -137,7 +137,7 @@ describe("ClassicDaikinClient", () => {
         horizontalPosition: "stop",
       });
 
-      await client.setState({ swingMode: "both" });
+      await client.setState({ swingMode: "3d" });
 
       expect(queriesSentTo(transport, SET_CONTROL_INFO)).toMatchObject([
         { f_dir: "3", f_dir_ud: "S", f_dir_lr: "S" },
