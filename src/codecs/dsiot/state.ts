@@ -376,7 +376,9 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
  * leaves for, and a louver position the unit does not take. It always writes
  * the `auto` fan speed in dehumidify, and in cool while a humidity setting is
  * on. A unit in a mode outside `OperatingMode` keeps it unless the control
- * sets one, and gets power, its transition and that mode alone. */
+ * sets one, and gets power, its transition and that mode alone. A unit in a
+ * mode of `DSIOT_OPERATING_MODE_ALIASES` keeps that value too, and gets the
+ * leaves of the mode it stands for. */
 export function applyDsiotControl(
   values: Record<string, string>,
   control: DaikinControl,
@@ -400,10 +402,7 @@ export function applyDsiotControl(
             ? DSIOT_POWER_TRANSITION_CODES.turningOn
             : DSIOT_POWER_TRANSITION_CODES.turningOff,
     },
-    {
-      path: DSIOT_PATHS.mode,
-      value: mode === undefined ? heldMode : encodeDsiotMode(mode),
-    },
+    { path: DSIOT_PATHS.mode, value: heldMode },
   ];
   // Which leaves a mode outside the model reads and writes is not known.
   if (mode === undefined) {

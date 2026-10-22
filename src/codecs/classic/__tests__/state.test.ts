@@ -108,6 +108,7 @@ describe("parseClassicState", () => {
     ["N", "naturalWind"],
     ["A", "auto"],
     ["F", "floorWarming"],
+    ["C", "circulating"],
   ])("reads f_dir_ud=%s as %s", (f_dir_ud, expected) => {
     expect(parseClassicState({ f_dir_ud }).verticalPosition).toBe(expected);
   });
@@ -126,7 +127,7 @@ describe("parseClassicState", () => {
   });
 
   it("reads a louver value outside the model as null", () => {
-    const state = parseClassicState({ f_dir_ud: "C", f_dir_lr: "N" });
+    const state = parseClassicState({ f_dir_ud: "X", f_dir_lr: "N" });
 
     expect(state.verticalPosition).toBeNull();
     expect(state.horizontalPosition).toBeNull();
@@ -677,11 +678,11 @@ describe("applyClassicControl", () => {
     it("sends a louver value outside the model back as it came", () => {
       expect(
         applyClassicControl(
-          { ...SWINGING_VERTICAL, f_dir_ud: "C" },
+          { ...SWINGING_VERTICAL, f_dir_ud: "X" },
           { power: false },
           THREE_D,
         ).f_dir_ud,
-      ).toBe("C");
+      ).toBe("X");
     });
 
     it("writes stop for a louver the unit reports no value for", () => {

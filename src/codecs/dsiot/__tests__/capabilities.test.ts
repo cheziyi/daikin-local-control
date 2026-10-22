@@ -43,7 +43,7 @@ describe("parseDsiotCapabilities", () => {
         "level5",
       ],
       swingModes: ["off", "vertical", "horizontal", "both"],
-      verticalPositions: ["stop", "swing"],
+      verticalPositions: ["stop"],
       horizontalPositions: ["stop"],
       targetTemperaturesInC: {
         auto: { min: 18, max: 30, step: 0.5 },
@@ -192,6 +192,25 @@ describe("parseDsiotCapabilities", () => {
       });
     });
 
+    it("reads the auto limits from p_1D's md.mi, a signed byte, and md.mx, capped at 30 °C", () => {
+      const AUTO_SETPOINT = modeLeaf("p_1D");
+
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          [`${AUTO_SETPOINT}.md.mi`]: "28",
+          [`${AUTO_SETPOINT}.md.mx`]: "38",
+        }).targetTemperaturesInC.auto,
+      ).toEqual({ min: 20, max: 28, step: 0.5 });
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          [`${AUTO_SETPOINT}.md.mi`]: "20",
+          [`${AUTO_SETPOINT}.md.mx`]: "40",
+        }).targetTemperaturesInC.auto,
+      ).toEqual({ min: 16, max: 30, step: 0.5 });
+    });
+
     it("ignores a limit that came without the other", () => {
       const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
@@ -227,7 +246,7 @@ describe("parseDsiotCapabilities", () => {
       );
 
       expect(verticalOnly.swingModes).toEqual(["off", "vertical"]);
-      expect(verticalOnly.verticalPositions).toEqual(["stop", "swing"]);
+      expect(verticalOnly.verticalPositions).toEqual(["stop"]);
       expect(verticalOnly.horizontalPositions).toEqual([]);
     });
 
@@ -257,9 +276,16 @@ describe("parseDsiotCapabilities", () => {
       expect(
         parseDsiotCapabilities({
           ...UNIT,
-          [`${COOL_VERTICAL}.md.mx`]: louverMask(0, 15, 16, 19, 25),
+          [`${COOL_VERTICAL}.md.mx`]: louverMask(0, 15, 16, 19, 20, 25),
         }).verticalPositions,
-      ).toEqual(["stop", "swing", "naturalWind", "auto", "floorWarming"]);
+      ).toEqual([
+        "stop",
+        "swing",
+        "naturalWind",
+        "auto",
+        "floorWarming",
+        "circulating",
+      ]);
       expect(
         parseDsiotCapabilities({
           ...UNIT,
@@ -369,6 +395,31 @@ describe("parseDsiotCapabilities", () => {
         }).targetHumidities,
       ).toMatchObject({ cool: ["off", ...SETTINGS], heat: [] });
     });
+  });
+
+  describe("specialOutlet", () => {
+    it("is set when the outlet leaf holds 0", () => {
+      expect(
+        parseDsiotCapabilities({ ...UNIT, [DSIOT_PATHS.specialOutlet]: "00" })
+          .specialOutlet,
+      ).toBe(true);
+      expect(
+        parseDsiotCapabilities({ ...UNIT, [DSIOT_PATHS.specialOutlet]: "0" })
+          .specialOutlet,
+      ).toBe(true);
+    });
+
+    it.each(["01", "0A", "", undefined])(
+      "is not set when the outlet leaf holds %s",
+      (pv) => {
+        expect(
+          parseDsiotCapabilities({
+            ...UNIT,
+            ...(pv === undefined ? {} : { [DSIOT_PATHS.specialOutlet]: pv }),
+          }).specialOutlet,
+        ).toBe(false);
+      },
+    );
   });
 
   describe("energyMonitoring", () => {

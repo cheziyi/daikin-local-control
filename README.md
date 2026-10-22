@@ -181,7 +181,7 @@ label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPasswo
 | `targetHumidity` | `off`, `autoLow`, `auto`, `autoHigh` or `continuous`, or `null` when the unit has no humidity setting. A Japanese unit set to a percentage reads as `{ percent: 50 }`; `getCapabilities()` never lists a percentage, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `fanSpeed` | `auto`, `silent`, or `level1` to `level5` |
 | `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
-| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto` or `floorWarming`, or `null` where the unit reports none |
+| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto`, `floorWarming` or `circulating`, or `null` where the unit reports none |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
 | `specialModes` | Those of `powerful`, `econo` and `streamer` that are on, empty when none is |
 

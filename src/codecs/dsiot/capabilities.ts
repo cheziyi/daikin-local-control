@@ -48,8 +48,9 @@ type LouverAxis = "vertical" | "horizontal";
 
 /** Turns the flattened `adp_i` tree and the indoor and outdoor `dgc_status`
  * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
- * degrees. Without the outdoor tree, `specialModes` lists no `powerful`. It
- * lists econo in every mode but fan: see UNSUPPORTED.md. */
+ * degrees, and the auto range caps at 30 °C whatever its `md.mx` says.
+ * Without the outdoor tree, `specialModes` lists no `powerful`. It lists
+ * econo in every mode but fan: see UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {
@@ -94,7 +95,10 @@ export function parseDsiotCapabilities(
       ? horizontalPositions(louverMask(values, "horizontal"))
       : [],
     targetTemperaturesInC: {
-      auto: offered("auto", { min: 18, max: 30, step: 0.5 }),
+      auto: offered(
+        "auto",
+        range(values, DSIOT_MODE_PATHS.auto.setpoint, 18, 30),
+      ),
       cool: offered(
         "cool",
         range(values, DSIOT_MODE_PATHS.cool.setpoint, 18, 32),
@@ -123,9 +127,7 @@ export function parseDsiotCapabilities(
       heat: specialModes("heat"),
       fan: specialModes("fan"),
     },
-    // Which leaf reports the special air outlet is not known: see
-    // UNSUPPORTED.md.
-    specialOutlet: false,
+    specialOutlet: hasSpecialOutlet(values[DSIOT_PATHS.specialOutlet]),
     energyMonitoring,
     demandControl:
       energyMonitoring &&
@@ -136,6 +138,12 @@ export function parseDsiotCapabilities(
     ),
     model: values[DSIOT_PATHS.model],
   };
+}
+
+// The leaf holds 0 on a unit with the outlet, read as a decimal: a hex value
+// such as `0A` is not one.
+function hasSpecialOutlet(pv: string | undefined): boolean {
+  return pv !== undefined && pv !== "" && Number(pv) === 0;
 }
 
 function hasLouver(values: Record<string, string>, axis: LouverAxis): boolean {
@@ -179,9 +187,9 @@ function swingModes(vertical: boolean, horizontal: boolean): SwingMode[] {
 // A unit that takes n fixed values offers the first n fixed positions, as
 // `parseDsiotState` names them by rank.
 function verticalPositions(mask: number): VerticalPosition[] {
-  // Without `md.mx` the unit does not say what it takes.
+  // Without `md.mx` the unit takes stop alone.
   if (mask === 0) {
-    return ["stop", "swing"];
+    return ["stop"];
   }
   const fixedCount = bitCount(mask & FIXED_LOUVER_MASK);
   return VERTICAL_POSITIONS.filter((position) => {

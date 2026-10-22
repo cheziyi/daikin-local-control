@@ -375,6 +375,7 @@ describe("parseDsiotState", () => {
       ["100000", "auto"],
       ["130000", "naturalWind"],
       ["190000", "floorWarming"],
+      ["140000", "circulating"],
     ])("reads %s as %s", (pv, expected) => {
       expect(vertical(pv)).toBe(expected);
     });
@@ -471,6 +472,17 @@ describe("applyDsiotControl", () => {
 
   describe("mode", () => {
     const humidifying = { ...INDOOR_STATUS, [DSIOT_PATHS.mode]: "0800" };
+
+    it("writes an alias of cool back as it came, with cool's leaves", () => {
+      expect(
+        leaves(
+          applyDsiotControl(
+            { ...INDOOR_STATUS, [DSIOT_PATHS.mode]: "0900" },
+            { targetTemperatureInC: 22 },
+          ),
+        ),
+      ).toMatchObject({ [DSIOT_PATHS.mode]: "0900", [modeLeaf("p_02")]: "2c" });
+    });
 
     it("writes a mode outside the model back as it came, with power alone", () => {
       expect(
@@ -787,6 +799,7 @@ describe("applyDsiotControl", () => {
       ["auto", "100000"],
       ["naturalWind", "130000"],
       ["floorWarming", "190000"],
+      ["circulating", "140000"],
     ] as const)(
       "writes the %s vertical position as %s",
       (verticalPosition, pv) => {

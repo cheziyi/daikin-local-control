@@ -43,6 +43,7 @@ describe("the classic tables", () => {
         naturalWind: "N",
         auto: "A",
         floorWarming: "F",
+        circulating: "C",
       },
       CLASSIC_HORIZONTAL_POSITION_CODES: {
         stop: "0",

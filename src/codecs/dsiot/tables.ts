@@ -41,8 +41,9 @@ export const DSIOT_TARGETS = {
 export const DSIOT_ADAPTER_TYPE = "GPF";
 
 /** `cdev` in a discovery reply from a DSIOT adapter whose unit is an air
- * cleaner. */
-export const DSIOT_AIR_CLEANER_DEVICES: readonly string[] = ["1D", "CJ"];
+ * conditioner. A reply without one is an air conditioner's as well; `1D` and
+ * `CJ` are an air cleaner's. */
+export const DSIOT_AIR_CONDITIONER_DEVICES: readonly string[] = ["RA", "NA"];
 
 /** Dotted paths into the `adp_i` and `adp_d` trees. The MAC address and the
  * version hold the value a classic adapter sends in `basic_info`, and the
@@ -71,6 +72,8 @@ export const DSIOT_PATHS = {
   model: "dgc_status.e_1002.e_A001.p_0D",
   modelType: "dgc_status.e_1002.e_A001.p_07",
   energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
+  /** Holds 0 on a unit with the special air outlet. */
+  specialOutlet: "dgc_status.e_1002.e_3003.p_43",
 } as const;
 
 /** What a leaf that is on or off holds, such as the power. */
@@ -224,6 +227,7 @@ export const DSIOT_LOUVER_VALUES = {
   swing: 15,
   auto: 16,
   naturalWind: 19,
+  circulating: 20,
   floorWarming: 25,
 } as const;
 
@@ -246,6 +250,7 @@ export const DSIOT_VERTICAL_POSITION_VALUES: Partial<
   naturalWind: DSIOT_LOUVER_VALUES.naturalWind,
   auto: DSIOT_LOUVER_VALUES.auto,
   floorWarming: DSIOT_LOUVER_VALUES.floorWarming,
+  circulating: DSIOT_LOUVER_VALUES.circulating,
 };
 
 /** The value each `HorizontalPosition` is held as. `stop` and a fixed position

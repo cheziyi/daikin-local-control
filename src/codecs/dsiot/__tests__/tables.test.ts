@@ -19,7 +19,7 @@ describe("the DSIOT tables", () => {
         outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md",
       },
       DSIOT_ADAPTER_TYPE: "GPF",
-      DSIOT_AIR_CLEANER_DEVICES: ["1D", "CJ"],
+      DSIOT_AIR_CONDITIONER_DEVICES: ["RA", "NA"],
       DSIOT_ADAPTER_PATHS: {
         name: "adp_d.name",
         macAddress: "adp_i.mac",
@@ -40,6 +40,7 @@ describe("the DSIOT tables", () => {
         model: "dgc_status.e_1002.e_A001.p_0D",
         modelType: "dgc_status.e_1002.e_A001.p_07",
         energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
+        specialOutlet: "dgc_status.e_1002.e_3003.p_43",
       },
       DSIOT_ON: "01",
       DSIOT_OFF: "00",
@@ -115,6 +116,7 @@ describe("the DSIOT tables", () => {
         swing: 15,
         auto: 16,
         naturalWind: 19,
+        circulating: 20,
         floorWarming: 25,
       },
       DSIOT_FIXED_LOUVER_VALUES: [
@@ -128,6 +130,7 @@ describe("the DSIOT tables", () => {
         naturalWind: 19,
         auto: 16,
         floorWarming: 25,
+        circulating: 20,
       },
       DSIOT_HORIZONTAL_POSITION_VALUES: { swing: 15, auto: 16 },
       DSIOT_HUMIDITY_OFF: "00",

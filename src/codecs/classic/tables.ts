@@ -63,6 +63,7 @@ export const CLASSIC_VERTICAL_POSITION_CODES: Record<VerticalPosition, string> =
     naturalWind: "N",
     auto: "A",
     floorWarming: "F",
+    circulating: "C",
   };
 export const CLASSIC_HORIZONTAL_POSITION_CODES: Record<
   HorizontalPosition,

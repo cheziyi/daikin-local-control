@@ -47,10 +47,12 @@ export const VERTICAL_POSITIONS = [
   "naturalWind",
   "auto",
   "floorWarming",
+  "circulating",
 ] as const;
 
 /** On a DSIOT adapter, `position1` to `position5` are the first five fixed
- * positions the unit takes, in the adapter's order. */
+ * positions the unit takes, in the adapter's order. `circulating` is the
+ * circulating airflow. */
 export type VerticalPosition = (typeof VERTICAL_POSITIONS)[number];
 
 export const HORIZONTAL_POSITIONS = [
