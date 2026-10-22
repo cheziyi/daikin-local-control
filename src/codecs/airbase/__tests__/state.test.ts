@@ -43,7 +43,7 @@ describe("parseAirbaseState", () => {
       targetHumidity: null,
       fanSpeed: "level3",
       swingMode: "off",
-      verticalPosition: null,
+      verticalPosition: "position1",
       horizontalPosition: null,
       specialModes: [],
     });
@@ -61,11 +61,11 @@ describe("parseAirbaseState", () => {
     ]);
   });
 
-  it("reads each fan speed and direction by its code", () => {
+  it("reads each fan speed and louver position by its code", () => {
     const fanSpeedOf = (f_rate: string) =>
       parseAirbaseState({ f_rate }).fanSpeed;
-    const swingModeOf = (f_dir: string) =>
-      parseAirbaseState({ f_dir }).swingMode;
+    const positionOf = (f_dir: string) =>
+      parseAirbaseState({ f_dir }).verticalPosition;
 
     expect(["0", "1", "3", "5", "B"].map(fanSpeedOf)).toEqual([
       "auto",
@@ -74,18 +74,30 @@ describe("parseAirbaseState", () => {
       "level5",
       "silent",
     ]);
-    expect(["0", "1", "2", "3"].map(swingModeOf)).toEqual([
-      "off",
-      "vertical",
-      "horizontal",
-      "both",
+    expect(["0", "1", "2", "3", "4", "7"].map(positionOf)).toEqual([
+      "position1",
+      "position2",
+      "position3",
+      "position4",
+      "position5",
+      "swing",
     ]);
   });
 
-  it("reads a mode or fan speed outside the model as auto, and a direction as off", () => {
+  it("reads the swing mode as vertical while the louver swings", () => {
+    expect(parseAirbaseState({ f_dir: "7" }).swingMode).toBe("vertical");
+    expect(parseAirbaseState({ f_dir: "2" }).swingMode).toBe("off");
+  });
+
+  it("reads a mode or fan speed outside the model as auto, and a direction as null", () => {
     expect(
-      parseAirbaseState({ mode: "HUM", f_rate: "9", f_dir: "7" }),
-    ).toMatchObject({ mode: "auto", fanSpeed: "auto", swingMode: "off" });
+      parseAirbaseState({ mode: "HUM", f_rate: "9", f_dir: "6" }),
+    ).toMatchObject({
+      mode: "auto",
+      fanSpeed: "auto",
+      swingMode: "off",
+      verticalPosition: null,
+    });
   });
 
   it("reads a setpoint that is not a number as null", () => {
@@ -150,10 +162,13 @@ describe("applyAirbaseControl", () => {
     ).toBe("1");
   });
 
-  it("writes a setpoint to one decimal place, and to the mode's memory", () => {
+  it("writes a setpoint as a whole number, rounded, and to the mode's memory", () => {
     expect(
       applyAirbaseControl(COOLING, { targetTemperatureInC: 22 }),
-    ).toMatchObject({ stemp: "22.0", dt2: "22.0" });
+    ).toMatchObject({ stemp: "22", dt2: "22" });
+    expect(
+      applyAirbaseControl(COOLING, { targetTemperatureInC: 22.6 }),
+    ).toMatchObject({ stemp: "23", dt2: "23" });
   });
 
   it("takes what the unit remembers for heat on a change to heat", () => {
@@ -177,17 +192,23 @@ describe("applyAirbaseControl", () => {
         mode: "heat",
         targetTemperatureInC: 19,
         fanSpeed: "level1",
-        swingMode: "both",
+        verticalPosition: "swing",
       }),
     ).toMatchObject({
       mode: "1",
-      stemp: "19.0",
-      dt1: "19.0",
+      stemp: "19",
+      dt1: "19",
       f_rate: "1",
       dfr1: "1",
-      f_dir: "3",
-      dfd1: "3",
+      f_dir: "7",
+      dfd1: "7",
     });
+  });
+
+  it("runs cool and heat on their own memory, whatever bk_auto names", () => {
+    expect(
+      applyAirbaseControl({ ...COOLING, bk_auto: "1" }, { fanSpeed: "level1" }),
+    ).toMatchObject({ mode: "2", bk_auto: "2", f_rate: "1", dfr2: "1" });
   });
 
   it("runs auto and fan on the mode bk_auto names", () => {
@@ -269,10 +290,13 @@ describe("applyAirbaseControl", () => {
     });
   });
 
-  it("writes a direction to the memory", () => {
+  it("writes a louver position to the memory", () => {
     expect(
-      applyAirbaseControl(COOLING, { swingMode: "vertical" }),
-    ).toMatchObject({ f_dir: "1", dfd2: "1" });
+      applyAirbaseControl(COOLING, { verticalPosition: "position3" }),
+    ).toMatchObject({ f_dir: "2", dfd2: "2" });
+    expect(
+      applyAirbaseControl(COOLING, { verticalPosition: "swing" }),
+    ).toMatchObject({ f_dir: "7", dfd2: "7" });
   });
 
   it("writes no fan or direction memory for a control that sets neither", () => {
@@ -283,15 +307,30 @@ describe("applyAirbaseControl", () => {
     }
   });
 
-  it("drops a humidity setting and a louver position", () => {
+  it("drops a humidity setting, a swing mode and a horizontal position", () => {
     expect(
       applyAirbaseControl(COOLING, {
         targetHumidity: "auto",
-        verticalPosition: "swing",
+        swingMode: "vertical",
         horizontalPosition: "swing",
       }),
     ).toEqual(applyAirbaseControl(COOLING, {}));
   });
+
+  it.each([
+    "stop",
+    "naturalWind",
+    "auto",
+    "floorWarming",
+    "circulating",
+  ] as const)(
+    "drops the %s vertical position, which the unit does not take",
+    (verticalPosition) => {
+      expect(applyAirbaseControl(COOLING, { verticalPosition })).toEqual(
+        applyAirbaseControl(COOLING, {}),
+      );
+    },
+  );
 
   it("sends a mode outside the model back as it came, and -- for a missing shum", () => {
     expect(

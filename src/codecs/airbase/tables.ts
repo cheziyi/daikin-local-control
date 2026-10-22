@@ -1,4 +1,8 @@
-import type { FanSpeed, OperatingMode, SwingMode } from "../../models/state.js";
+import type {
+  FanSpeed,
+  OperatingMode,
+  VerticalPosition,
+} from "../../models/state.js";
 
 // The codes an Airbase adapter holds each value of a model as. It numbers
 // the modes and the fan speeds differently from a classic adapter.
@@ -21,11 +25,24 @@ export const AIRBASE_FAN_SPEED_CODES: Record<FanSpeed, string> = {
   level5: "5",
 };
 
-export const AIRBASE_SWING_MODE_CODES: Record<SwingMode, string> = {
-  off: "0",
-  vertical: "1",
-  horizontal: "2",
-  both: "3",
+/** The louver positions an Airbase unit holds `f_dir` at. */
+export type AirbaseVerticalPosition = Extract<
+  VerticalPosition,
+  "position1" | "position2" | "position3" | "position4" | "position5" | "swing"
+>;
+
+/** `f_dir`: five fixed louver positions and swing. The values 5 and 6 stand
+ * for none of them: see UNSUPPORTED.md. */
+export const AIRBASE_VERTICAL_POSITION_CODES: Record<
+  AirbaseVerticalPosition,
+  string
+> = {
+  position1: "0",
+  position2: "1",
+  position3: "2",
+  position4: "3",
+  position5: "4",
+  swing: "7",
 };
 
 /** What `stemp` holds in a mode without a setpoint, such as dehumidify. */

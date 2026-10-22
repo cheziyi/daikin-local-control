@@ -46,42 +46,66 @@ describe("parseAirbaseZones", () => {
 });
 
 describe("applyAirbaseZone", () => {
+  // A unit that sets a temperature for each zone, and what it answers.
+  const LINEAR_ZONES = { ...FOUR_ZONES, en_linear_zone: "1" };
+  const WITH_TEMPERATURES = {
+    ...ZONE_SETTING,
+    lztemp_c: "24%3b25%3b24%3b24%3b0%3b0%3b0%3b0",
+    lztemp_h: "20%3b21%3b20%3b20%3b0%3b0%3b0%3b0",
+  };
+  const COOL = "24;25;24;24;0;0;0;0";
+  const HEAT = "20;21;20;20;0;0;0;0";
+
   it("sets one zone, and sends every name and every other zone back as held", () => {
-    expect(applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, 1, true)).toEqual({
+    expect(applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, {}, 1, true)).toEqual({
       zone_name: "Living  ;Kitchen;Bed 1;Bed 2;Zone5;Zone6;Zone7;Zone8",
       zone_onoff: "1;1;1;0;0;0;0;0",
     });
     expect(
-      applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, 0, false).zone_onoff,
+      applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, {}, 0, false).zone_onoff,
     ).toBe("0;0;1;0;0;0;0;0");
   });
 
-  it("sends each zone's temperatures back where the unit has them", () => {
+  it.each([
+    ["cool", { mode: "2" }, { lztemp_c: COOL }],
+    ["heat", { mode: "1" }, { lztemp_h: HEAT }],
+    ["auto on cool", { mode: "3", bk_auto: "2" }, { lztemp_c: COOL }],
+    ["auto on heat", { mode: "3", bk_auto: "1" }, { lztemp_h: HEAT }],
+    ["auto without bk_auto", { mode: "3" }, { lztemp_c: COOL }],
+    ["fan", { mode: "0" }, {}],
+    ["dehumidify", { mode: "7" }, {}],
+  ])(
+    "sends the zone temperatures of a unit in %s that sets one for each zone",
+    (_mode, controlInfo, temperatures) => {
+      expect(
+        applyAirbaseZone(WITH_TEMPERATURES, LINEAR_ZONES, controlInfo, 3, true),
+      ).toEqual({
+        zone_name: "Living  ;Kitchen;Bed 1;Bed 2;Zone5;Zone6;Zone7;Zone8",
+        zone_onoff: "1;0;1;1;0;0;0;0",
+        ...temperatures,
+      });
+    },
+  );
+
+  it("sends no zone temperature for a unit that reports no en_linear_zone=1", () => {
     expect(
-      applyAirbaseZone(
-        {
-          ...ZONE_SETTING,
-          lztemp_c: "24%3b25%3b24%3b24%3b0%3b0%3b0%3b0",
-          lztemp_h: "20%3b21%3b20%3b20%3b0%3b0%3b0%3b0",
-        },
-        FOUR_ZONES,
-        3,
-        true,
-      ),
-    ).toMatchObject({
-      zone_onoff: "1;0;1;1;0;0;0;0",
-      lztemp_c: "24;25;24;24;0;0;0;0",
-      lztemp_h: "20;21;20;20;0;0;0;0",
-    });
+      applyAirbaseZone(WITH_TEMPERATURES, FOUR_ZONES, { mode: "2" }, 3, true),
+    ).not.toHaveProperty("lztemp_c");
+  });
+
+  it("sends no zone temperature the reply lacks", () => {
+    expect(
+      applyAirbaseZone(ZONE_SETTING, LINEAR_ZONES, { mode: "2" }, 3, true),
+    ).not.toHaveProperty("lztemp_c");
   });
 
   it("throws for an index the unit has no zone at", () => {
     for (const index of [4, -1, 1.5]) {
       expect(() =>
-        applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, index, true),
+        applyAirbaseZone(ZONE_SETTING, FOUR_ZONES, {}, index, true),
       ).toThrow(`The unit has no zone ${index}: it has 4`);
     }
-    expect(() => applyAirbaseZone(ZONE_SETTING, {}, 0, true)).toThrow(
+    expect(() => applyAirbaseZone(ZONE_SETTING, {}, {}, 0, true)).toThrow(
       "The unit has no zone 0: it has 0",
     );
   });

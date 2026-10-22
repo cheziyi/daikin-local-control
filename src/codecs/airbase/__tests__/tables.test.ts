@@ -22,11 +22,13 @@ describe("the Airbase tables", () => {
         level4: "4",
         level5: "5",
       },
-      AIRBASE_SWING_MODE_CODES: {
-        off: "0",
-        vertical: "1",
-        horizontal: "2",
-        both: "3",
+      AIRBASE_VERTICAL_POSITION_CODES: {
+        position1: "0",
+        position2: "1",
+        position3: "2",
+        position4: "3",
+        position5: "4",
+        swing: "7",
       },
       AIRBASE_NO_SETPOINT: "--",
       AIRBASE_ZONE_LIST_SEPARATOR: ";",

@@ -219,14 +219,15 @@ given, whether or not the unit lists it.
 | `targetTemperatureInC` | In `fan` and `dehumidify` |
 | `targetHumidity` | In `fan` |
 | `fanSpeed` | In `dehumidify`, and on a DSIOT adapter in `cool` while a humidity setting is on: the fan runs on `auto` |
-| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position. On an Airbase adapter, always |
+| `swingMode` | On an Airbase adapter, always: set `verticalPosition` to `swing` or to a position instead |
+| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position. On an Airbase adapter, every horizontal position and a vertical one outside `position1` to `position5` and `swing` |
 
 An Airbase adapter also drops every `targetHumidity`, and a
 `targetTemperatureInC` in `fan` as well as in `dehumidify`.
 
 `setState()` rounds `targetTemperatureInC` to the nearest step the adapter
-takes: a whole degree on a classic adapter, so 23.5 is sent as 24, and half a
-degree on a DSIOT adapter, so 23.3 is sent as 23.5.
+takes: a whole degree on a classic or an Airbase adapter, so 23.5 is sent as
+24, and half a degree on a DSIOT adapter, so 23.3 is sent as 23.5.
 
 `setState()` takes no `specialModes`: turn one on or off with
 `setSpecialMode()`, which sends a request of its own. Check the mode against
@@ -331,7 +332,10 @@ if (client instanceof AirbaseDaikinClient) {
 A `fanSpeed` in `setState()` switches airside off and keeps fan auto.
 
 Only a unit with zones takes fan auto and airside, and it takes no `auto` fan
-speed and no `swingMode`: `getCapabilities()` lists what a unit takes.
+speed and no louver position: `getCapabilities()` lists what a unit takes. A
+unit without zones holds its louver at one of `position1` to `position5` or
+at `swing`, set through `verticalPosition`; `swingMode` reads `vertical`
+while it swings, and `setState()` takes none.
 
 ### Errors and retries
 
@@ -427,7 +431,8 @@ as a `verticalPosition` on a unit without fixed louver positions.
 `startAirbaseSimulator()` takes `deviceInfo`, `state` and `sensors` as the
 other two do, and a `unit` of its own. It reports no humidity unless
 `sensors` gives one, and its `setState()` throws an `Error` for a
-`targetHumidity`, a louver position or a special mode.
+`targetHumidity`, a `swingMode`, a `horizontalPosition`, a special mode, and a
+`verticalPosition` outside `position1` to `position5` and `swing`.
 
 ```ts
 import { startAirbaseSimulator } from "daikin-local-control/simulators";

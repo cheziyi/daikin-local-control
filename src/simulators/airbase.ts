@@ -2,9 +2,10 @@ import {
   AIRBASE_FAN_SPEED_CODES,
   AIRBASE_NO_SETPOINT,
   AIRBASE_OPERATING_MODE_CODES,
-  AIRBASE_SWING_MODE_CODES,
+  AIRBASE_VERTICAL_POSITION_CODES,
   AIRBASE_ZONE_LIST_SEPARATOR,
   AIRBASE_ZONE_TEMPERATURE_FIELDS,
+  type AirbaseVerticalPosition,
 } from "../codecs/airbase/tables.js";
 import { CLASSIC_ADAPTER_TYPE } from "../codecs/classic/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
@@ -58,13 +59,13 @@ const DEFAULT_CONTROL_INFO: Record<string, string> = {
   f_rate: AIRBASE_FAN_SPEED_CODES.auto,
   f_auto: "0",
   f_airside: "0",
-  f_dir: AIRBASE_SWING_MODE_CODES.off,
+  f_dir: AIRBASE_VERTICAL_POSITION_CODES.position1,
   dt1: "25.0",
   dt2: "24.0",
   dfr1: AIRBASE_FAN_SPEED_CODES.auto,
   dfr2: AIRBASE_FAN_SPEED_CODES.auto,
-  dfd1: AIRBASE_SWING_MODE_CODES.off,
-  dfd2: AIRBASE_SWING_MODE_CODES.off,
+  dfd1: AIRBASE_VERTICAL_POSITION_CODES.position1,
+  dfd2: AIRBASE_VERTICAL_POSITION_CODES.position1,
   auto1: "0",
   auto2: "0",
   airside1: "0",
@@ -164,8 +165,9 @@ export interface StartAirbaseSimulatorOptions extends StartSimulatorOptions {
 /** An Airbase adapter and the unit behind it. Each field map is what its
  * endpoint answers, in the adapter's own names and encodings, without the
  * `ret`. A write through the adapter changes them, and so do `setState`,
- * `setSensors` and `setZone`. Change a field directly for what those do not
- * cover, such as `controlInfo.f_auto` for fan auto. */
+ * `setSensors` and `setZone`. `setState` sets the louver through
+ * `verticalPosition`, and throws for a `swingMode`. Change a field directly
+ * for what those do not cover, such as `controlInfo.f_auto` for fan auto. */
 export interface AirbaseDaikinSimulator extends DaikinSimulator {
   /** What `/skyfi/common/basic_info` answers. `name` is held percent-encoded,
    * as the reply carries it. */
@@ -407,7 +409,7 @@ function applyState(
 ): void {
   for (const field of [
     "targetHumidity",
-    "verticalPosition",
+    "swingMode",
     "horizontalPosition",
   ] as const) {
     if (state[field] != null) {
@@ -416,6 +418,14 @@ function applyState(
   }
   if (state.specialModes != null && state.specialModes.length > 0) {
     throw new Error("The simulated unit has no specialModes to set");
+  }
+  if (
+    state.verticalPosition != null &&
+    !(state.verticalPosition in AIRBASE_VERTICAL_POSITION_CODES)
+  ) {
+    throw new Error(
+      `The simulated unit takes no verticalPosition ${state.verticalPosition}`,
+    );
   }
 
   if (state.power != null) {
@@ -434,8 +444,11 @@ function applyState(
   if (state.fanSpeed != null) {
     controlInfo.f_rate = AIRBASE_FAN_SPEED_CODES[state.fanSpeed];
   }
-  if (state.swingMode != null) {
-    controlInfo.f_dir = AIRBASE_SWING_MODE_CODES[state.swingMode];
+  if (state.verticalPosition != null) {
+    controlInfo.f_dir =
+      AIRBASE_VERTICAL_POSITION_CODES[
+        state.verticalPosition as AirbaseVerticalPosition
+      ];
   }
   remember(controlInfo);
 }

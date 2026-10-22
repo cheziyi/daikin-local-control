@@ -294,9 +294,12 @@ describe("startAirbaseSimulator", () => {
       expect(() => simulator.setState({ targetHumidity: "auto" })).toThrow(
         "The simulated unit has no targetHumidity to set",
       );
-      expect(() => simulator.setState({ verticalPosition: "swing" })).toThrow(
-        "The simulated unit has no verticalPosition to set",
+      expect(() => simulator.setState({ swingMode: "vertical" })).toThrow(
+        "The simulated unit has no swingMode to set",
       );
+      expect(() =>
+        simulator.setState({ verticalPosition: "naturalWind" }),
+      ).toThrow("The simulated unit takes no verticalPosition naturalWind");
       expect(() => simulator.setState({ specialModes: ["powerful"] })).toThrow(
         "The simulated unit has no specialModes to set",
       );
@@ -330,7 +333,15 @@ describe("AirbaseDaikinClient against the simulator", () => {
     expect(await clientFor(simulator).getCapabilities()).toMatchObject({
       modes: ["auto", "dehumidify", "cool", "heat", "fan"],
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      swingModes: [],
+      verticalPositions: [
+        "position1",
+        "position2",
+        "position3",
+        "position4",
+        "position5",
+        "swing",
+      ],
       targetTemperaturesInC: {
         cool: { min: 18, max: 32, step: 1 },
         heat: { min: 10, max: 30, step: 1 },
@@ -384,7 +395,7 @@ describe("AirbaseDaikinClient against the simulator", () => {
       targetHumidity: null,
       fanSpeed: "auto",
       swingMode: "off",
-      verticalPosition: null,
+      verticalPosition: "position1",
       horizontalPosition: null,
       specialModes: [],
     });
@@ -399,7 +410,7 @@ describe("AirbaseDaikinClient against the simulator", () => {
       mode: "heat",
       targetTemperatureInC: 21,
       fanSpeed: "level3",
-      swingMode: "vertical",
+      verticalPosition: "swing",
     });
 
     expect(await client.getState()).toMatchObject({
@@ -408,6 +419,7 @@ describe("AirbaseDaikinClient against the simulator", () => {
       targetTemperatureInC: 21,
       fanSpeed: "level3",
       swingMode: "vertical",
+      verticalPosition: "swing",
     });
   });
 
