@@ -537,9 +537,11 @@ Three limits apply, and [UNSUPPORTED.md](UNSUPPORTED.md) says what is not known
 about each:
 
 - **Europe**: power, mode, setpoint, fan, swing and special modes go to a
-  classic adapter there as they do elsewhere. `getCapabilities()` follows the
-  rules of the other markets, and which adapters there speak HTTPS is not
-  known.
+  classic adapter there as they do elsewhere. An adapter there takes them over
+  plain HTTP, with no registration and no child lock code; the client sends a
+  terminal uuid all the same. `getCapabilities()` follows the rules of the
+  other markets, and whether an adapter there that reports `en_secure=1`
+  speaks HTTPS is not known.
 - **A DSIOT adapter in Europe** (BRP069C series) is not covered: it may not
   answer on the LAN until it is switched on.
 - **An Airbase adapter** is told from a classic one by how it answers over
