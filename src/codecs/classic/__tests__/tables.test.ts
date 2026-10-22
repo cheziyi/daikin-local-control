@@ -82,6 +82,8 @@ describe("the classic tables", () => {
       CLASSIC_SWING_AXES_CODES: { none: "0", vertical: "1", both: "3" },
       CLASSIC_DEMAND_MODE_CODES: { manual: "0", auto: "2" },
       CLASSIC_LOCAL_PASSWORD_PARAMETER: "lpw",
+      CLASSIC_DEFAULT_REGION: "th",
+      CLASSIC_FLOOR_WARMING_DIRECTION: "6",
       CLASSIC_TERMINAL_SCOPE_CODES: { self: "0", others: "1", all: "2" },
       CLASSIC_REMOTE_METHODS: { polling: "polling", homeOnly: "home only" },
     });

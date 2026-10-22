@@ -12,13 +12,11 @@ To add one, pin down the request and reply first, then delete its row.
 | DSIOT `/config/*` endpoints: time zone, date and time, network settings, Wi-Fi scan, firmware update | The request bodies. | Not reachable |
 | DSIOT fixed horizontal louver positions | Which position each value 1-14 stands for. `getState` reports `stop` for any of them, and a control that sets `stop` keeps the position. | `DsiotDaikinClient.multireqUpdate()` |
 | DSIOT dehumidify setpoint write | Whether `p_1E` accepts a write; it is treated as read-only, so `setState` drops a `targetTemperatureInC` in dehumidify. | `DsiotDaikinClient.multireqUpdate()` |
-| Classic `shum_asean`, the humidity setting of a `subtype=qa` unit | What each value stands for. `setState` sends such a unit no humidity setting, and `getCapabilities` lists none. | `ClassicDaikinClient.command()` |
 | Classic vertical louver value `f_dir_ud=C` | What it stands for. `getState` reports `null`. | `ClassicDaikinClient.command()` |
 | Classic schedule demand mode (`mode=1`) | The full format of the weekly table it needs (`moc`..`suc`, `<day><n>_en`/`_t`/`_p`). | `ClassicDaikinClient.command()` |
 | Heat plus: classic `spmode_kind=4`, DSIOT `dgc_status.e_1002.e_3003.p_1C` | Which units take it. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqUpdate()` |
 | Timers, weekly programs, schedule timers (`/aircon/get_timer`, `set_timer`, `get_program`, `set_program`, `get_scdltimer_info`, `get_scdltimer_body`, `set_scdltimer_info`, `set_scdltimer_body`) | Their parameters. | `ClassicDaikinClient.command()` |
 | Classic setting reads: `/aircon/get_demand_control`, `/aircon/get_price`, `/aircon/get_target`, `/common/get_holiday` | The reply fields. `getHolidayMode` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
-| Classic `method` in `/common/get_remote_method` | Whether the reply carries it. `getOutOfHomeAccess` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
 | Energy history: classic `/aircon/get_week_power`, `get_year_power`, `get_day_power_ex`, `get_week_power_ex`, `get_year_power_ex`, and DSIOT `adr_0100.history` | The unit of each value, and which day or month each position in a list stands for. | `ClassicDaikinClient.command()` |
 | Power draw: classic `mompow` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_A005.p_01` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
 | Compressor frequency: classic `cmpfreq` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_2006.p_04` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
@@ -55,7 +53,8 @@ These values are known, but the package's types don't represent them yet:
 | Humidify mode (classic `HUM`, DSIOT `0800`) and laundry mode (classic `LND`) | `mode: "auto"`. `setState` keeps the mode unless the control sets one, and on a DSIOT adapter writes power alone while it is kept. |
 | DSIOT vertical louver values other than stop, the first five fixed positions, swing, auto, natural wind and floor warming | `verticalPosition: null` |
 | DSIOT laundry mode (`dgc_status.e_1002.e_3003.p_25` = `01`) | The mode in `dgc_status.e_1002.e_3001.p_01` |
-| Classic `f_dir=6` (heat with the special air outlet) | `swingMode: "off"` |
+| Classic `f_dir=6`, the vertical louver at floor warming, on a unit without `f_dir_ud` | `swingMode: "off"` and `verticalPosition: null`. A 3D unit reports `floorWarming` from `f_dir_ud`, and `setState` writes `f_dir=6` with it |
+| Classic `shum_asean`, the humidity setting of a `subtype=qa` unit: 0 for off and 1 to 3 for a level, taken in cool, with `s_humd_asean` bits 1, 2, 4 and 8 for the values a unit takes | `targetHumidity: null`. `setState` sends such a unit no humidity setting, and `getCapabilities` lists none |
 | Japanese units (`reg=jp`), which follow separate rules for limits, humidity and fan, and take a humidity percentage | The rules for other regions |
 | Airbase zone temperatures: `lztemp_c` and `lztemp_h` in `/aircon/get_zone_setting`, a setpoint for each zone in cool and in heat | Nothing: `getZones` leaves them out, and `setZone` sends them back as the unit holds them |
 | Airbase fan auto and airside | `fanSpeed` holds `f_rate` alone. `AirbaseDaikinClient.getFanAuto` and `getAirside` report the other two |
@@ -96,8 +95,7 @@ These answers are a simulator's own choice, where an adapter's is not known:
 | Answers `rsc` 4001, with HTTP 200, to a DSIOT request without the right `Authorization` | Whether an adapter answers that or HTTP 401. |
 | Answers `ret=PARAM NG` to a classic write without a parameter, or with a `spmode_kind` other than 1, 2 and 4. `/aircon/set_control_info` needs `pow`, `mode`, `stemp`, `f_rate` and, on a unit that reports it, `shum` | Which requests an adapter answers `PARAM NG`, and whether it takes a `set_control_info` without one of them. |
 | Holds any value it is sent or set to, and a special mode the unit does not report taking | What an adapter answers to a value the unit does not take. |
-| Drops a `/aircon/set_control_info` parameter that is not a control field or the `dt`, `dh` or `dfd` of a mode | Which other parameters an adapter takes. |
-| Answers `/common/get_remote_method` with `notice_ip_int` and `notice_sync_int` alone | Whether the reply carries `method`. |
+| Drops a `/aircon/set_control_info` parameter that is not a control field or the `dt`, `dh`, `dfd` or `ndfd` of a mode | Which other parameters an adapter takes. |
 | Answers every reply's fields in one order, with no field beyond those it holds | The order of an adapter's fields, and the fields no caller of this package reads. |
 | Keeps answering after `/common/reboot` and `/config/system/reboot` | How long an adapter stays away. |
 | Answers `rsc` 2000 to a DSIOT read and 2004 to a write, without `fr`, and without `pc` on a write | Which `rsc` from 2000 to 2004 an adapter answers each with, and what else the reply carries. |

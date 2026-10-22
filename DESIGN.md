@@ -31,7 +31,7 @@ that reply:
 
 | Adapter | A write carries | The reply supplies |
 | --- | --- | --- |
-| Classic | Every control field the unit takes, on each `set_control_info`: `pow`, `mode`, `stemp`, `shum`, `f_rate` and the direction fields. Whether the adapter takes a request without one of them is not known, so none is left out. | Each field the control leaves out. On a mode change, the values the adapter remembers for the target mode: `dt3`, `dh3`, `dfr3` and `dfd3` for cool. |
+| Classic | Every control field the unit takes, on each `set_control_info`: `pow`, `mode`, `stemp`, `shum`, `f_rate` and the direction fields. The adapter takes a write without the direction fields, and sets the louvers from one that carries them, so `setState` carries them: a swing mode or a position then goes in the same write as the rest. Whether it takes a write without one of the others is not known, so none is left out. | Each field the control leaves out. On a mode change, the values the adapter remembers for the target mode: `dt3`, `dh3`, `dfr3` and `dfd3` for cool, or `ndfd3` on a unit that reports no `dfd3`. |
 | DSIOT | The power, the power transition and the mode on each write, then only the leaves the control changes | The power the unit holds, which decides the transition. The mode, when the control sets none. The `md` of the louver and humidity leaves, which a position and a percentage are encoded from. |
 
 With `maxStateAgeForSetStateInMs` set, `setState` skips that read while the

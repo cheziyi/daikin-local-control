@@ -398,6 +398,48 @@ describe("applyClassicControl", () => {
         ).f_dir,
       ).toBe("3");
     });
+
+    it.each([
+      ["00", "0"],
+      ["S0", "1"],
+      ["S-", "1"],
+      ["0S", "2"],
+      ["SS", "3"],
+      ["F0", "6"],
+      ["3S", "2"],
+      ["A0", "0"],
+    ])(
+      "takes f_dir from the new mode's ndfd=%s when it reports no dfd",
+      (ndfd3, f_dir) => {
+        expect(
+          applyClassicControl(
+            { ...HEATING, ndfd3 },
+            { mode: "cool" },
+            DIRECTION,
+          ).f_dir,
+        ).toBe(f_dir);
+      },
+    );
+
+    it("prefers dfd to ndfd for f_dir", () => {
+      expect(
+        applyClassicControl(
+          { ...HEATING, dfd3: "1", ndfd3: "SS" },
+          { mode: "cool" },
+          DIRECTION,
+        ).f_dir,
+      ).toBe("1");
+    });
+
+    it("keeps the current f_dir when the new mode's ndfd is not two values", () => {
+      expect(
+        applyClassicControl(
+          { ...HEATING, f_dir: "2", ndfd3: "S" },
+          { mode: "cool" },
+          DIRECTION,
+        ).f_dir,
+      ).toBe("2");
+    });
   });
 
   it("writes auto as mode=1", () => {
@@ -530,6 +572,16 @@ describe("applyClassicControl", () => {
           THREE_D,
         ),
       ).toMatchObject({ f_dir: "0", f_dir_ud: "A", f_dir_lr: "A" });
+    });
+
+    it("writes f_dir=6 with the floor warming position", () => {
+      expect(
+        applyClassicControl(
+          SWINGING_VERTICAL,
+          { verticalPosition: "floorWarming" },
+          THREE_D,
+        ),
+      ).toMatchObject({ f_dir: "6", f_dir_ud: "F", f_dir_lr: "0" });
     });
 
     it("writes a position over the swing mode sent with it", () => {

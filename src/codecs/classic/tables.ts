@@ -165,6 +165,12 @@ export const CLASSIC_DEMAND_MODE_CODES: Record<DemandMode, string> = {
 /** The query parameter that carries the local password. */
 export const CLASSIC_LOCAL_PASSWORD_PARAMETER = "lpw";
 
+/** The `reg` of an adapter that reports none. */
+export const CLASSIC_DEFAULT_REGION = "th";
+
+/** `f_dir` while the vertical louver is at `floorWarming`. */
+export const CLASSIC_FLOOR_WARMING_DIRECTION = "6";
+
 /** `type` in `unregister_terminal`. */
 export const CLASSIC_TERMINAL_SCOPE_CODES: Record<TerminalScope, string> = {
   self: "0",

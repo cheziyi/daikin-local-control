@@ -98,15 +98,15 @@ export function applyClassicOutOfHomeAccess(
 }
 
 /** Encodes the price as the `set_price` query takes it: whole units
- * (`price_int`) and hundredths (`price_dec`). The price is rounded to two
- * decimal places. */
+ * (`price_int`) and hundredths (`price_dec`), the latter as two digits. The
+ * price is rounded to two decimal places. */
 export function encodeClassicEnergyPrice(
   price: number,
 ): Record<string, string> {
   const hundredths = Math.round(price * 100);
   return {
     price_int: String(Math.trunc(hundredths / 100)),
-    price_dec: String(hundredths % 100),
+    price_dec: String(hundredths % 100).padStart(2, "0"),
   };
 }
 

@@ -15,6 +15,7 @@ import {
 import { takesClassicDirection, takesClassicHumidity } from "./capabilities.js";
 import {
   CLASSIC_FAN_SPEED_CODES,
+  CLASSIC_FLOOR_WARMING_DIRECTION,
   CLASSIC_HORIZONTAL_POSITION_CODES,
   CLASSIC_HUMIDITY_SETTING_CODES,
   CLASSIC_LOUVER_STOP,
@@ -115,7 +116,9 @@ export function parseClassicSensors(
  * `set_control_info` query: power and mode, the setpoint, humidity and fan
  * speed for the target mode, and the airflow fields the unit takes. When the
  * mode changes, each comes from the target mode's memory: `dt`, `dh`, `dfr`,
- * `dfd` and, for the louvers, `ndfd`. `capabilityFields`, the field map of
+ * and `dfd` or, on a unit that reports `ndfd` alone, the `f_dir` its two
+ * louver values stand for. On a 3D unit the louvers come from `ndfd`, and
+ * `f_dir` is 6 while the vertical one is at floor warming. `capabilityFields`, the field map of
  * `mergeClassicCapabilityFields`, says which fields the unit takes: `shum`
  * unless it is `subtype=qa`, `f_dir_ud` and `f_dir_lr` on a 3D unit
  * (`en_fdir2`), and `f_dir` on a unit that takes a direction. It rounds a
@@ -215,18 +218,42 @@ export function applyClassicControl(
     next.f_dir_ud = vertical;
     next.f_dir_lr = horizontal;
     if (takesDirection) {
-      next.f_dir = String(
-        (vertical === CLASSIC_LOUVER_SWING ? 1 : 0) |
-          (horizontal === CLASSIC_LOUVER_SWING ? 2 : 0),
-      );
+      next.f_dir = directionOf(vertical, horizontal);
     }
   } else if (takesDirection) {
     next.f_dir =
       control.swingMode === undefined
-        ? remembered("f_dir", "dfd")
+        ? ((modeChanged
+            ? (current[`dfd${mode}`] ??
+              decodeLouverMemory(current[`ndfd${mode}`]))
+            : undefined) ??
+          current.f_dir ??
+          "")
         : CLASSIC_SWING_MODE_CODES[control.swingMode];
   }
   return next;
+}
+
+// `f_dir` sets bit 1 while the vertical louver swings and bit 2 while the
+// horizontal one does, and is 6 while the vertical one is at floor warming.
+function directionOf(vertical: string, horizontal: string): string {
+  if (vertical === CLASSIC_VERTICAL_POSITION_CODES.floorWarming) {
+    return CLASSIC_FLOOR_WARMING_DIRECTION;
+  }
+  return String(
+    (vertical === CLASSIC_LOUVER_SWING ? 1 : 0) |
+      (horizontal === CLASSIC_LOUVER_SWING ? 2 : 0),
+  );
+}
+
+// The `f_dir` an `ndfd<mode>` value stands for, on a unit that reports no
+// `dfd<mode>`. A fixed position counts as stop.
+function decodeLouverMemory(ndfd: string | undefined): string | undefined {
+  if (ndfd === undefined || ndfd.length !== 2) {
+    return undefined;
+  }
+  const [vertical = "", horizontal = ""] = ndfd;
+  return directionOf(vertical, horizontal);
 }
 
 function parseSpecialModes(adv: string | undefined): SpecialMode[] {

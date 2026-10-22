@@ -19,6 +19,7 @@ import {
 import {
   CLASSIC_CAPABILITY_VERSIONS,
   CLASSIC_COOLING_ONLY_TYPE,
+  CLASSIC_DEFAULT_REGION,
   CLASSIC_FAN_LEVELS_BY_STEPS,
   CLASSIC_HUMIDITY_MODE_BITS,
   CLASSIC_SPECIAL_MODE_BITS,
@@ -57,8 +58,9 @@ export function mergeClassicCapabilityFields(
 
 /** Turns the field map from `mergeClassicCapabilityFields` into
  * `DaikinCapabilities`. `cpv` (capability-protocol version) is the master
- * branch. Units for Japan (`reg=jp`) follow other rules, which this package
- * does not model. */
+ * branch. A unit that reports no `reg` is read as one sold for `th`, and a
+ * `reg` is read whatever its letter case. Units for Japan (`reg=jp`) follow
+ * other rules, which this package does not model. */
 export function parseClassicCapabilities(
   fields: Record<string, string>,
 ): DaikinCapabilities {
@@ -131,6 +133,10 @@ function present(fields: Record<string, string>, key: string): boolean {
   return (fields[key] ?? "") !== "";
 }
 
+function region(fields: Record<string, string>): string {
+  return (fields.reg || CLASSIC_DEFAULT_REGION).toLowerCase();
+}
+
 function modes(fields: Record<string, string>, cpv: string): OperatingMode[] {
   if (!CLASSIC_CAPABILITY_VERSIONS.includes(cpv)) {
     return [];
@@ -144,13 +150,14 @@ function fanSpeeds(
   fields: Record<string, string>,
   modern: boolean,
 ): FanSpeed[] {
-  if (!present(fields, "reg") || fields.reg === "jp") {
+  if (region(fields) === "jp") {
     return [];
   }
   // A `reg=th`, `subtype=qa` unit is controllable by the speeds it lists, not
-  // by `en_frate`.
-  const listsItsSpeeds = fields.reg === "th" && fields.subtype === "qa";
-  if (!listsItsSpeeds && fields.en_frate !== "1") {
+  // by `en_frate`, but from cpv 2 it lists none without `en_frate=1`.
+  const listsItsSpeeds =
+    region(fields) === CLASSIC_DEFAULT_REGION && fields.subtype === "qa";
+  if ((!listsItsSpeeds || modern) && fields.en_frate !== "1") {
     return [];
   }
   const speeds: FanSpeed[] = [];
@@ -215,9 +222,6 @@ function swingModes(fields: Record<string, string>): SwingMode[] {
 /** Whether a unit's `set_control_info` takes `f_dir`, read from the field map
  * of `mergeClassicCapabilityFields`. */
 export function takesClassicDirection(fields: Record<string, string>): boolean {
-  if (!present(fields, "reg")) {
-    return false;
-  }
   if (fields.subtype === "qa") {
     return fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical;
   }

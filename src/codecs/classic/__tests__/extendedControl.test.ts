@@ -129,14 +129,14 @@ describe("encodeClassicEnergyPrice", () => {
     });
   });
 
-  it("writes the hundredths as a number, without a leading zero", () => {
+  it("writes the hundredths as two digits", () => {
     expect(encodeClassicEnergyPrice(1.05)).toEqual({
       price_int: "1",
-      price_dec: "5",
+      price_dec: "05",
     });
     expect(encodeClassicEnergyPrice(4)).toEqual({
       price_int: "4",
-      price_dec: "0",
+      price_dec: "00",
     });
   });
 
@@ -147,7 +147,7 @@ describe("encodeClassicEnergyPrice", () => {
     });
     expect(encodeClassicEnergyPrice(1.999)).toEqual({
       price_int: "2",
-      price_dec: "0",
+      price_dec: "00",
     });
   });
 });

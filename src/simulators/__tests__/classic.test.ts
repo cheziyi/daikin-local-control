@@ -605,6 +605,19 @@ describe("ClassicDaikinClient against the simulator", () => {
     });
   });
 
+  it("answers get_remote_method with the method of basic_info", async () => {
+    const simulator = await simulatorWith({ basicInfo: { method: "polling" } });
+
+    expect(
+      await clientFor(simulator).command("/common/get_remote_method"),
+    ).toEqual({
+      ret: "OK",
+      method: "polling",
+      notice_ip_int: "3600",
+      notice_sync_int: "60",
+    });
+  });
+
   it("sends the intervals back with the out-of-home access it sets", async () => {
     const simulator = await simulatorWith();
 

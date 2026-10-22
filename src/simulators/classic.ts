@@ -115,9 +115,9 @@ const REGISTER_TERMINAL_PATH = "/common/register_terminal";
 // joins them on a unit whose `get_control_info` reports it.
 const REQUIRED_CONTROL_PARAMETERS = ["pow", "mode", "stemp", "f_rate"];
 // The parameters `set_control_info` stores: the control fields, and the
-// memory of a mode by name, such as `dt3` and `dfd4`.
+// memory of a mode by name, such as `dt3`, `dfd4` and `ndfd4`.
 const CONTROL_PARAMETER_PATTERN =
-  /^(pow|mode|stemp|shum|f_rate|f_dir|f_dir_ud|f_dir_lr|(dt|dh|dfd)\w)$/;
+  /^(pow|mode|stemp|shum|f_rate|f_dir|f_dir_ud|f_dir_lr|(dt|dh|dfd|ndfd)\w)$/;
 // The control field each memory prefix remembers: `dt3` holds the `stemp` of
 // mode 3.
 const MODE_MEMORY_FIELDS = {
@@ -232,12 +232,16 @@ export async function startClassicSimulator(
   setState(options.state ?? {});
   setSensors(options.sensors ?? {});
 
-  const reads: Record<string, Record<string, string>> = {
-    "/common/basic_info": basicInfo,
-    "/common/get_remote_method": remoteMethod,
-    "/aircon/get_model_info": modelInfo,
-    "/aircon/get_control_info": controlInfo,
-    "/aircon/get_sensor_info": sensorInfo,
+  const reads: Record<string, () => Record<string, string>> = {
+    "/common/basic_info": () => basicInfo,
+    // The reply carries the `method` of `basic_info` as well.
+    "/common/get_remote_method": () => ({
+      method: basicInfo.method ?? "",
+      ...remoteMethod,
+    }),
+    "/aircon/get_model_info": () => modelInfo,
+    "/aircon/get_control_info": () => controlInfo,
+    "/aircon/get_sensor_info": () => sensorInfo,
   };
 
   // Each write returns false for a request that lacks a parameter.
@@ -342,12 +346,12 @@ export async function startClassicSimulator(
   };
 
   const answer = (request: DaikinSimulatorRequest): SimulatorReply => {
-    const fields = reads[request.path];
+    const read = reads[request.path];
     const write = writes[request.path];
     const registers = request.path === REGISTER_TERMINAL_PATH;
     if (
       request.method !== "GET" ||
-      (fields === undefined && write === undefined && !registers)
+      (read === undefined && write === undefined && !registers)
     ) {
       return unanswered(request);
     }
@@ -376,8 +380,8 @@ export async function startClassicSimulator(
       return reply("LPW NG");
     }
 
-    if (fields !== undefined) {
-      return reply("OK", fields);
+    if (read !== undefined) {
+      return reply("OK", read());
     }
     return reply(write?.(request.query, terminalUuid) ? "OK" : "PARAM NG");
   };
