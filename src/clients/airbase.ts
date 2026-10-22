@@ -153,8 +153,6 @@ export class AirbaseDaikinClient implements DaikinClient {
     throw new DaikinError("An Airbase adapter takes no special mode", 501);
   }
 
-  // --- extended controls ---------------------------------------------------
-
   /** Whether fan auto is on: the unit then picks the fan speed itself, up to
    * the one that is set. `null` on a unit that takes no fan auto. */
   async getFanAuto(): Promise<boolean | null> {

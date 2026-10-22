@@ -1,6 +1,5 @@
 import type {
   DemandControl,
-  DemandMode,
   DeviceGroup,
   DeviceMetadata,
   TerminalScope,
@@ -8,6 +7,7 @@ import type {
 import type { SpecialMode } from "../../models/state.js";
 import { decodeClassicText } from "./keyValue.js";
 import {
+  CLASSIC_DEMAND_MODE_CODES,
   CLASSIC_REMOTE_METHODS,
   CLASSIC_SPECIAL_MODE_KIND_CODES,
   CLASSIC_TERMINAL_SCOPE_CODES,
@@ -15,11 +15,6 @@ import {
 
 // Encodes each control outside `DaikinState` as the query its classic `set_*`
 // endpoint takes, and reads each one back from the reply that reports it.
-
-const DEMAND_MODE_CODES: Record<DemandMode, string> = {
-  manual: "0",
-  auto: "2",
-};
 
 const REMOTE_METHOD_INTERVALS = ["notice_ip_int", "notice_sync_int"];
 
@@ -54,7 +49,7 @@ export function encodeClassicDemandControl(
   return {
     demand_type: "1",
     en_demand: flag(demand.enabled),
-    mode: DEMAND_MODE_CODES[demand.mode],
+    mode: CLASSIC_DEMAND_MODE_CODES[demand.mode],
     max_pow: String(demand.maxPowerInPercent),
   };
 }

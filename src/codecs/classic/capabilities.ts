@@ -17,37 +17,20 @@ import {
   type VerticalPosition,
 } from "../../models/state.js";
 import {
+  CLASSIC_CAPABILITY_VERSIONS,
   CLASSIC_COOLING_ONLY_TYPE,
+  CLASSIC_FAN_LEVELS_BY_STEPS,
+  CLASSIC_HUMIDITY_MODE_BITS,
   CLASSIC_SPECIAL_MODE_BITS,
+  CLASSIC_SWING_AXES_CODES,
 } from "./tables.js";
 
-const CAPABILITY_VERSIONS = ["0", "1", "2", "3"];
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "cool",
   "dehumidify",
   "fan",
 ];
 const VERTICAL_SWING_MODES: SwingMode[] = ["off", "vertical"];
-const ALL_FAN_LEVELS: FanSpeed[] = [
-  "level1",
-  "level2",
-  "level3",
-  "level4",
-  "level5",
-];
-const FAN_LEVELS_BY_STEPS: Record<string, FanSpeed[]> = {
-  "2": ["level1", "level5"],
-  "3": ["level1", "level3", "level5"],
-  "5": ALL_FAN_LEVELS,
-};
-// `s_humd` is a decimal mask with one bit for each mode that takes a humidity
-// setting.
-const HUMIDITY_MODE_BITS = {
-  auto: 0x01,
-  cool: 0x02,
-  heat: 0x04,
-  dehumidify: 0x10,
-} as const;
 // Dehumidify takes no off.
 const DEHUMIDIFY_HUMIDITY_SETTINGS = HUMIDITY_SETTINGS.filter(
   (setting) => setting !== "off",
@@ -149,7 +132,7 @@ function present(fields: Record<string, string>, key: string): boolean {
 }
 
 function modes(fields: Record<string, string>, cpv: string): OperatingMode[] {
-  if (!CAPABILITY_VERSIONS.includes(cpv)) {
+  if (!CLASSIC_CAPABILITY_VERSIONS.includes(cpv)) {
     return [];
   }
   return fields.model_type === CLASSIC_COOLING_ONLY_TYPE
@@ -181,9 +164,9 @@ function fanSpeeds(
     speeds.push("silent");
   }
   const levels =
-    "frate_steps" in fields
-      ? (FAN_LEVELS_BY_STEPS[fields.frate_steps ?? ""] ?? [])
-      : ALL_FAN_LEVELS;
+    CLASSIC_FAN_LEVELS_BY_STEPS[
+      "frate_steps" in fields ? (fields.frate_steps ?? "") : "5"
+    ] ?? [];
   return [...speeds, ...levels];
 }
 
@@ -203,10 +186,10 @@ function targetHumidities(
       ? Number.parseInt(fields.s_humd ?? "", 10)
       : 0;
   const settings = (
-    mode: keyof typeof HUMIDITY_MODE_BITS,
+    mode: keyof typeof CLASSIC_HUMIDITY_MODE_BITS,
     values: TargetHumidity[],
   ) =>
-    offeredModes.includes(mode) && mask & HUMIDITY_MODE_BITS[mode]
+    offeredModes.includes(mode) && mask & CLASSIC_HUMIDITY_MODE_BITS[mode]
       ? values
       : [];
   return {
@@ -222,7 +205,9 @@ function targetHumidities(
 // without `f_dir` swings through `f_dir_ud`/`f_dir_lr` on both axes.
 function swingModes(fields: Record<string, string>): SwingMode[] {
   if (takesClassicDirection(fields)) {
-    return fields.s_fdir === "1" ? VERTICAL_SWING_MODES : [...SWING_MODES];
+    return fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical
+      ? VERTICAL_SWING_MODES
+      : [...SWING_MODES];
   }
   return fields.en_fdir2 === "1" ? [...SWING_MODES] : [];
 }
@@ -234,11 +219,14 @@ export function takesClassicDirection(fields: Record<string, string>): boolean {
     return false;
   }
   if (fields.subtype === "qa") {
-    return fields.s_fdir === "1";
+    return fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical;
   }
   const cpv = fields.cpv;
   if (cpv === "0" || cpv === "1") {
-    return fields.s_fdir === "1" || fields.s_fdir === "3";
+    return (
+      fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical ||
+      fields.s_fdir === CLASSIC_SWING_AXES_CODES.both
+    );
   }
   return (cpv === "2" || cpv === "3") && fields.en_fdir === "1";
 }

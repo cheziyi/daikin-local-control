@@ -114,8 +114,6 @@ export class DsiotDaikinClient implements DaikinClient {
     await this.multireq("PUT", buildDsiotSpecialModeUpdate(mode, enabled));
   }
 
-  // --- extended controls ---------------------------------------------------
-
   /** Reboot the adapter (`/config/system/reboot`). */
   async reboot(): Promise<void> {
     await this.transport.send({

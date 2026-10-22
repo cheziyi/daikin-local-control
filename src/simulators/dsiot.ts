@@ -6,8 +6,11 @@ import {
   DSIOT_EDGES,
   DSIOT_FAN_SPEED_CODES,
   DSIOT_FIXED_LOUVER_VALUES,
+  DSIOT_HEAT_PUMP_MODEL_TYPE,
   DSIOT_HUMIDITY_OFF,
   DSIOT_HUMIDITY_SETTING_FLAGS,
+  DSIOT_LOCAL_PASSWORD_HEADER,
+  DSIOT_LOCAL_PASSWORD_SCHEME,
   DSIOT_LOUVER_VALUES,
   DSIOT_MODE_PATHS,
   DSIOT_OFF,
@@ -18,11 +21,12 @@ import {
   DSIOT_SPECIAL_MODE_PATHS,
 } from "../codecs/dsiot/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
-import type {
-  DaikinSensors,
-  DaikinState,
-  OperatingMode,
-  SpecialMode,
+import {
+  type DaikinSensors,
+  type DaikinState,
+  FIXED_LOUVER_POSITIONS,
+  type OperatingMode,
+  type SpecialMode,
 } from "../models/state.js";
 import {
   type DaikinSimulator,
@@ -103,8 +107,7 @@ const ADAPTER_VERSION_ADDRESS = adapterAddress(
 // A louver leaf is three bytes, the low byte first.
 const LOUVER_BYTES = 3;
 
-// What `DSIOT_PATHS.modelType` holds on a heat pump.
-const HEAT_PUMP_MODEL_TYPE = "00";
+const FIXED_POSITIONS: readonly string[] = FIXED_LOUVER_POSITIONS;
 
 // Every setting has a leaf for each mode, and the unit runs on those of the
 // mode it is in. A signed setpoint is one byte of half degrees, and the rest
@@ -303,7 +306,8 @@ export async function startDsiotSimulator(
     }
     if (
       options.localPassword !== undefined &&
-      request.headers.authorization !== `Basic ${options.localPassword}`
+      request.headers[DSIOT_LOCAL_PASSWORD_HEADER.toLowerCase()] !==
+        `${DSIOT_LOCAL_PASSWORD_SCHEME} ${options.localPassword}`
     ) {
       return json({ responses: [{ rsc: RSC_UNAUTHORIZED }] });
     }
@@ -383,7 +387,9 @@ function applyUnit(leaves: Leaves, unit: DaikinSimulatorUnit): Leaves {
     hold(
       leaves,
       MODEL_TYPE_ADDRESS,
-      unit.coolingOnly ? DSIOT_COOLING_ONLY_MODEL_TYPE : HEAT_PUMP_MODEL_TYPE,
+      unit.coolingOnly
+        ? DSIOT_COOLING_ONLY_MODEL_TYPE
+        : DSIOT_HEAT_PUMP_MODEL_TYPE,
     );
   }
   if (unit.fan === false) {
@@ -583,14 +589,6 @@ function applyState(leaves: Leaves, state: Partial<DaikinState>): void {
   }
 }
 
-const FIXED_POSITIONS: readonly string[] = [
-  "position1",
-  "position2",
-  "position3",
-  "position4",
-  "position5",
-];
-
 function fixedLouverValues(leaf: DsiotSimulatorLeaf | undefined): number[] {
   const bytes = leaf?.md?.mx?.match(/../g) ?? [];
   const mask = Number.parseInt(bytes.reverse().join(""), 16);
@@ -709,7 +707,7 @@ function defaultLeaves(): Leaves {
     [ADAPTER_NAME_ADDRESS]: written("Simulator"),
 
     [statusAddress(DSIOT_PATHS.model)]: reported("0ABB"),
-    [MODEL_TYPE_ADDRESS]: reported(HEAT_PUMP_MODEL_TYPE),
+    [MODEL_TYPE_ADDRESS]: reported(DSIOT_HEAT_PUMP_MODEL_TYPE),
     [POWER_ADDRESS]: written(DSIOT_OFF),
     [INDOOR_TEMPERATURE_ADDRESS]: reported("1A"),
     [INDOOR_HUMIDITY_ADDRESS]: reported("37"),

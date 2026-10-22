@@ -6,17 +6,17 @@ import {
   parseClassicKeyValue,
 } from "./codecs/classic/keyValue.js";
 import { isAirConditioner, parseDevice } from "./codecs/device.js";
+import {
+  DAIKIN_DISCOVERY_PORT,
+  DAIKIN_DISCOVERY_PROBE,
+} from "./codecs/tables.js";
 import type { DaikinDevice } from "./models/device.js";
 import { DaikinTransport } from "./transport.js";
 
-// The UDP discovery probe: broadcast this to :30050, listen for `basic_info`
-// replies.
-const DISCOVERY_PROBE = "DAIKIN_UDP/common/basic_info";
-const DISCOVERY_LISTEN_PORT = 30050;
 // An adapter answers the port a probe came from. The probe leaves from the
 // first of these ports that is free: see DESIGN.md#discovery.
 const FIRST_DISCOVERY_SEND_PORT = 30000;
-const LAST_DISCOVERY_SEND_PORT = 30050;
+const LAST_DISCOVERY_SEND_PORT = DAIKIN_DISCOVERY_PORT;
 
 const DEFAULT_DISCOVERY_TIMEOUT_IN_MS = 3_000;
 const BROADCAST_ADDRESS = "255.255.255.255";
@@ -63,9 +63,9 @@ export async function discoverDevices(
   return new Promise((resolve, reject) => {
     let probesSent = 0;
 
-    const probe = Buffer.from(DISCOVERY_PROBE, "utf8");
+    const probe = Buffer.from(DAIKIN_DISCOVERY_PROBE, "utf8");
     const sendProbe = () => {
-      socket.send(probe, DISCOVERY_LISTEN_PORT, BROADCAST_ADDRESS);
+      socket.send(probe, DAIKIN_DISCOVERY_PORT, BROADCAST_ADDRESS);
       probesSent += 1;
       if (probesSent >= PROBE_COUNT) {
         clearInterval(probeTimer);

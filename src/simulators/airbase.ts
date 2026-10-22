@@ -3,6 +3,8 @@ import {
   AIRBASE_NO_SETPOINT,
   AIRBASE_OPERATING_MODE_CODES,
   AIRBASE_SWING_MODE_CODES,
+  AIRBASE_ZONE_LIST_SEPARATOR,
+  AIRBASE_ZONE_TEMPERATURE_FIELDS,
 } from "../codecs/airbase/tables.js";
 import { CLASSIC_ADAPTER_TYPE } from "../codecs/classic/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
@@ -99,11 +101,12 @@ const MEMORY_FIELDS = {
   airside: "f_airside",
 } as const;
 
-// The lists of `get_zone_setting` are joined by this, percent-encoded.
-const ZONE_SEPARATOR = ";";
+// The lists of `get_zone_setting` are held percent-encoded.
 const ZONE_PARAMETERS = ["zone_name", "zone_onoff"];
 // A unit that sets a temperature for each zone holds these as well.
-const ZONE_TEMPERATURE_PARAMETERS = ["lztemp_c", "lztemp_h"];
+const ZONE_TEMPERATURE_PARAMETERS = Object.values(
+  AIRBASE_ZONE_TEMPERATURE_FIELDS,
+);
 
 // A sensor field the unit has no reading for.
 const NO_READING = "-";
@@ -352,13 +355,13 @@ function encodeZones(names: readonly string[]): Record<string, string> {
 }
 
 function encodeList(values: readonly string[]): string {
-  return encodeURIComponent(values.join(ZONE_SEPARATOR));
+  return encodeURIComponent(values.join(AIRBASE_ZONE_LIST_SEPARATOR));
 }
 
 function decodeList(value: string | undefined): string[] {
   return value === undefined
     ? []
-    : decodeURIComponent(value).split(ZONE_SEPARATOR);
+    : decodeURIComponent(value).split(AIRBASE_ZONE_LIST_SEPARATOR);
 }
 
 // The `basic_info` fields: the name percent-encoded, the MAC address without

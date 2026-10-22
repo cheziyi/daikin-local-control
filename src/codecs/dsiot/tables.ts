@@ -80,6 +80,14 @@ export const DSIOT_OFF = "00";
 /** `DSIOT_PATHS.modelType` on a unit that only cools. */
 export const DSIOT_COOLING_ONLY_MODEL_TYPE = "01";
 
+/** `DSIOT_PATHS.modelType` on a heat pump. */
+export const DSIOT_HEAT_PUMP_MODEL_TYPE = "00";
+
+/** The header that carries the local password, as `DSIOT_LOCAL_PASSWORD_SCHEME`
+ * and the code itself, not base64. */
+export const DSIOT_LOCAL_PASSWORD_HEADER = "Authorization";
+export const DSIOT_LOCAL_PASSWORD_SCHEME = "Basic";
+
 /** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
  * edge. */
 export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
@@ -183,6 +191,20 @@ export const DSIOT_OPERATING_MODE_CODES: Record<OperatingMode, string> = {
   auto: "0300",
   dehumidify: "0500",
 };
+
+/** The other mode values an adapter reports, and the mode whose leaves each
+ * one runs on. */
+export const DSIOT_OPERATING_MODE_ALIASES: Record<string, OperatingMode> = {
+  "0900": "cool",
+  "0A00": "heat",
+};
+
+/** What `DSIOT_PATHS.powerTransition` is written as, beside the power. */
+export const DSIOT_POWER_TRANSITION_CODES = {
+  turningOn: "00",
+  turningOff: "01",
+  unchanged: "02",
+} as const;
 
 export const DSIOT_FAN_SPEED_CODES: Record<FanSpeed, string> = {
   auto: "0A00",

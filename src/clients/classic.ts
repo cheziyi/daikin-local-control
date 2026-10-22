@@ -145,8 +145,8 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  // --- extended controls ---------------------------------------------------
-  // Each write goes to its own endpoint, not `set_control_info`.
+  // Each extended control goes to an endpoint of its own, not
+  // `set_control_info`.
 
   /** Whether the adapter's status LED is on (`basic_info`): `null` when the
    * adapter does not report it. */
@@ -154,7 +154,6 @@ export class ClassicDaikinClient implements DaikinClient {
     return parseClassicLed(await this.command(CLASSIC_ROUTES.basicInfo));
   }
 
-  /** Adapter status LED on/off (`set_led`). */
   async setLed(on: boolean): Promise<void> {
     await this.command(CLASSIC_ROUTES.setLed, encodeClassicLed(on));
   }
@@ -167,7 +166,6 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Holiday / away mode (`set_holiday`). */
   async setHolidayMode(enabled: boolean): Promise<void> {
     await this.command(
       CLASSIC_ROUTES.setHoliday,
@@ -175,7 +173,6 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Demand control — cap the unit's power draw (`set_demand_control`). */
   async setDemandControl(demand: DemandControl): Promise<void> {
     await this.command(
       CLASSIC_ROUTES.setDemandControl,
@@ -210,7 +207,8 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Energy target for the "target" feature (`set_target`). */
+  /** The monthly electricity cost the unit's consumption is shown against: a
+   * whole number in the currency `setEnergyPrice` is given in. */
   async setEnergyTarget(target: number): Promise<void> {
     await this.command(
       CLASSIC_ROUTES.setTarget,
@@ -218,12 +216,13 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Name / icon / group metadata (`basic_info`). */
+  /** Reads the name, icon and group from `basic_info`. */
   async getMetadata(): Promise<DeviceMetadata> {
     return parseClassicMetadata(await this.command(CLASSIC_ROUTES.basicInfo));
   }
 
-  /** Name / icon / group metadata (`set_name` etc.). */
+  /** Sends one request for each field given: `set_name`, `set_icon` and
+   * `set_group`. */
   async setMetadata(metadata: DeviceMetadata): Promise<void> {
     if (metadata.name !== undefined) {
       await this.command(
@@ -264,7 +263,7 @@ export class ClassicDaikinClient implements DaikinClient {
     );
   }
 
-  /** Reboot the adapter (`reboot`). */
+  /** `/common/reboot`, never retried: see DESIGN.md#retries. */
   async reboot(): Promise<void> {
     await this.command(CLASSIC_ROUTES.reboot, undefined, { retry: false });
   }

@@ -347,12 +347,13 @@ A client method that fails rejects with a `DaikinError`; branch on
 | 501 | `AirbaseDaikinClient.setSpecialMode()`: an Airbase adapter has no request for a special mode |
 | Any other | The adapter's own HTTP status, such as 403 |
 
-Four failures are not a `DaikinError`: `discoverDevices()` rejects with the
+Five failures are not a `DaikinError`: `discoverDevices()` rejects with the
 socket's error, `createDaikinClient()` throws an `Error` for a
 [terminal uuid](#credentials) in the wrong form, `multireqUpdate()` throws
 an `Error` for a path that names a resource without a leaf, such as
-`dgc_status`, and `setZone()` rejects with an `Error` for an index the unit
-has no zone at.
+`dgc_status`, `setZone()` rejects with an `Error` for an index the unit has
+no zone at, and every method rejects with an `Error` without sending once
+`dispose()` has been called.
 
 Only a `DaikinConnectionError` is retried, up to five times by default.
 [DESIGN.md](DESIGN.md#retries) says why.

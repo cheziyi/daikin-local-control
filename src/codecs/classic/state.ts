@@ -20,6 +20,7 @@ import {
   CLASSIC_LOUVER_STOP,
   CLASSIC_LOUVER_SWING,
   CLASSIC_NO_SETPOINT,
+  CLASSIC_OPERATING_MODE_ALIASES,
   CLASSIC_OPERATING_MODE_CODES,
   CLASSIC_SPECIAL_MODE_ADV_CODES,
   CLASSIC_SWING_MODE_CODES,
@@ -30,13 +31,13 @@ import {
 // `DaikinSensors` from `get_sensor_info`.
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
-  "0": "auto",
-  "1": "auto",
-  "7": "auto",
-  "2": "dehumidify",
-  "3": "cool",
-  "4": "heat",
-  "6": "fan",
+  ...Object.fromEntries(
+    Object.entries(CLASSIC_OPERATING_MODE_CODES).map(([mode, code]) => [
+      code,
+      mode as OperatingMode,
+    ]),
+  ),
+  ...CLASSIC_OPERATING_MODE_ALIASES,
 };
 
 const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(

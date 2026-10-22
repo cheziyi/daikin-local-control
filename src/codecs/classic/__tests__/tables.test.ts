@@ -14,6 +14,7 @@ describe("the classic tables", () => {
         heat: "4",
         fan: "6",
       },
+      CLASSIC_OPERATING_MODE_ALIASES: { "0": "auto", "7": "auto" },
       CLASSIC_FAN_SPEED_CODES: {
         auto: "A",
         silent: "B",
@@ -70,6 +71,17 @@ describe("the classic tables", () => {
       CLASSIC_SPECIAL_MODE_BITS: { powerful: 1, econo: 2, streamer: 4 },
       CLASSIC_ADAPTER_TYPE: "aircon",
       CLASSIC_COOLING_ONLY_TYPE: "C",
+      CLASSIC_HEAT_PUMP_TYPE: "N",
+      CLASSIC_CAPABILITY_VERSIONS: ["0", "1", "2", "3"],
+      CLASSIC_FAN_LEVELS_BY_STEPS: {
+        "2": ["level1", "level5"],
+        "3": ["level1", "level3", "level5"],
+        "5": ["level1", "level2", "level3", "level4", "level5"],
+      },
+      CLASSIC_HUMIDITY_MODE_BITS: { auto: 1, cool: 2, heat: 4, dehumidify: 16 },
+      CLASSIC_SWING_AXES_CODES: { none: "0", vertical: "1", both: "3" },
+      CLASSIC_DEMAND_MODE_CODES: { manual: "0", auto: "2" },
+      CLASSIC_LOCAL_PASSWORD_PARAMETER: "lpw",
       CLASSIC_TERMINAL_SCOPE_CODES: { self: "0", others: "1", all: "2" },
       CLASSIC_REMOTE_METHODS: { polling: "polling", homeOnly: "home only" },
     });

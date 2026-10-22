@@ -69,18 +69,21 @@ export interface DaikinRequest {
 export interface DaikinTransportOptions {
   /** With `:port` when the adapter announces one. */
   host: string;
-  /** HTTPS (a Marvell adapter in secure mode). */
+  /** Whether the adapter speaks HTTPS, as a Marvell adapter in secure mode
+   * does. Defaults to false. */
   usesHttps?: boolean;
   /** The terminal uuid, sent as `X-Daikin-uuid` on every call: 32 lowercase
    * hexadecimal digits, a UUID without its dashes. Without one the header is
    * left out, as an Airbase adapter takes it. */
   terminalUuid?: string;
+  /** What each request carries for the local password. Defaults to none: no
+   * request carries one. */
   authentication?: DaikinAuthentication;
   /** How long, in milliseconds, to wait for each of the connection, the
    * reply's headers and the reply's body before `send` throws a
    * `DaikinError` with status 504. Defaults to 10000. */
   timeoutInMs?: number;
-  /** HTTPS adapters only. */
+  /** HTTPS adapters only. Defaults to none: see `DaikinTlsOptions.ca`. */
   tls?: DaikinTlsOptions;
 }
 
@@ -89,7 +92,8 @@ export interface DaikinTransportOptions {
  * all; supplying the CA turns chain verification on. */
 export interface DaikinTlsOptions {
   /** Daikin's CA certificate (PEM). The chain is then verified against it, but
-   * not the hostname: the adapter's certificate doesn't name its LAN address. */
+   * not the hostname: the adapter's certificate doesn't name its LAN address.
+   * Defaults to none: the certificate is not verified. */
   ca?: string | Buffer;
 }
 

@@ -29,6 +29,8 @@ describe("the Airbase tables", () => {
         both: "3",
       },
       AIRBASE_NO_SETPOINT: "--",
+      AIRBASE_ZONE_LIST_SEPARATOR: ";",
+      AIRBASE_ZONE_TEMPERATURE_FIELDS: { cool: "lztemp_c", heat: "lztemp_h" },
     });
   });
 });

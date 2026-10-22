@@ -2,8 +2,10 @@ import {
   CLASSIC_ADAPTER_TYPE,
   CLASSIC_COOLING_ONLY_TYPE,
   CLASSIC_FAN_SPEED_CODES,
+  CLASSIC_HEAT_PUMP_TYPE,
   CLASSIC_HORIZONTAL_POSITION_CODES,
   CLASSIC_HUMIDITY_SETTING_CODES,
+  CLASSIC_LOCAL_PASSWORD_PARAMETER,
   CLASSIC_LOUVER_STOP,
   CLASSIC_LOUVER_SWING,
   CLASSIC_NO_SETPOINT,
@@ -12,10 +14,12 @@ import {
   CLASSIC_SPECIAL_MODE_ADV_CODES,
   CLASSIC_SPECIAL_MODE_BITS,
   CLASSIC_SPECIAL_MODE_KIND_CODES,
+  CLASSIC_SWING_AXES_CODES,
   CLASSIC_SWING_MODE_CODES,
   CLASSIC_TERMINAL_SCOPE_CODES,
   CLASSIC_VERTICAL_POSITION_CODES,
 } from "../codecs/classic/tables.js";
+import { DAIKIN_TERMINAL_UUID_HEADER } from "../codecs/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
 import type { DaikinSensors, DaikinState } from "../models/state.js";
 import {
@@ -137,11 +141,6 @@ const ADV_CODES_BY_SPECIAL_MODE_KIND: Record<string, string> = {
 
 // A sensor field the unit has no reading for.
 const NO_READING = "-";
-
-// `type` in `get_model_info` on a heat pump.
-const HEAT_PUMP_TYPE = "N";
-// `s_fdir`: the axes the louvers swing on.
-const SWING_AXES_CODES = { none: "0", vertical: "1", both: "3" } as const;
 
 /** What a simulated classic unit has. */
 export interface ClassicSimulatorUnit extends DaikinSimulatorUnit {
@@ -372,7 +371,7 @@ export async function startClassicSimulator(
     }
     if (
       options.localPassword !== undefined &&
-      request.query.lpw !== options.localPassword
+      request.query[CLASSIC_LOCAL_PASSWORD_PARAMETER] !== options.localPassword
     ) {
       return reply("LPW NG");
     }
@@ -404,7 +403,9 @@ export async function startClassicSimulator(
 function encodeUnit(unit: ClassicSimulatorUnit): Record<string, string> {
   const fields: Record<string, string> = {};
   if (unit.coolingOnly !== undefined) {
-    fields.type = unit.coolingOnly ? CLASSIC_COOLING_ONLY_TYPE : HEAT_PUMP_TYPE;
+    fields.type = unit.coolingOnly
+      ? CLASSIC_COOLING_ONLY_TYPE
+      : CLASSIC_HEAT_PUMP_TYPE;
   }
   if (unit.fan !== undefined) {
     fields.en_frate = flag(unit.fan);
@@ -414,7 +415,7 @@ function encodeUnit(unit: ClassicSimulatorUnit): Record<string, string> {
   }
   if (unit.swing !== undefined) {
     fields.en_fdir = flag(unit.swing !== "none");
-    fields.s_fdir = SWING_AXES_CODES[unit.swing];
+    fields.s_fdir = CLASSIC_SWING_AXES_CODES[unit.swing];
   }
   if (unit.specialModes !== undefined) {
     fields.en_spmode = String(
@@ -586,7 +587,8 @@ function reply(ret: string, fields?: Record<string, string>): SimulatorReply {
 }
 
 function terminalUuidOf(request: DaikinSimulatorRequest): string | undefined {
-  const header = request.headers["x-daikin-uuid"];
+  // Node lowercases the names of the headers it receives.
+  const header = request.headers[DAIKIN_TERMINAL_UUID_HEADER.toLowerCase()];
   return typeof header === "string" ? header : undefined;
 }
 

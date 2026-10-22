@@ -30,3 +30,13 @@ export const AIRBASE_SWING_MODE_CODES: Record<SwingMode, string> = {
 
 /** What `stemp` holds in a mode without a setpoint, such as dehumidify. */
 export const AIRBASE_NO_SETPOINT = "--";
+
+/** `get_zone_setting` joins each of its lists with this, form-encoded. */
+export const AIRBASE_ZONE_LIST_SEPARATOR = ";";
+
+/** The setpoint of each zone in cool and in heat, in `get_zone_setting` on a
+ * unit that sets one for each zone. */
+export const AIRBASE_ZONE_TEMPERATURE_FIELDS = {
+  cool: "lztemp_c",
+  heat: "lztemp_h",
+} as const;

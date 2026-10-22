@@ -31,8 +31,10 @@ import {
   DSIOT_MODE_PATHS,
   DSIOT_OFF,
   DSIOT_ON,
+  DSIOT_OPERATING_MODE_ALIASES,
   DSIOT_OPERATING_MODE_CODES,
   DSIOT_PATHS,
+  DSIOT_POWER_TRANSITION_CODES,
   DSIOT_SPECIAL_MODE_PATHS,
   DSIOT_VERTICAL_POSITION_VALUES,
   type DsiotHumidity,
@@ -56,7 +58,6 @@ export function buildDsiotSpecialModeUpdate(
   );
 }
 
-// --- value encodings -------------------------------------------------------
 // Leaf values are hex strings. Multi-byte values are little-endian, and
 // temperatures count half degrees.
 
@@ -124,13 +125,13 @@ function nullIfNaN(value: number): number | null {
 }
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
-  "0000": "fan",
-  "0100": "heat",
-  "0200": "cool",
-  "0300": "auto",
-  "0500": "dehumidify",
-  "0900": "cool",
-  "0A00": "heat",
+  ...Object.fromEntries(
+    Object.entries(DSIOT_OPERATING_MODE_CODES).map(([mode, code]) => [
+      code,
+      mode as OperatingMode,
+    ]),
+  ),
+  ...DSIOT_OPERATING_MODE_ALIASES,
 };
 
 export function encodeDsiotMode(mode: OperatingMode): string {
@@ -342,12 +343,6 @@ function isHumidityOn(
     : targetHumidity !== "off";
 }
 
-const POWER_TRANSITIONS = {
-  turningOn: "00",
-  turningOff: "01",
-  unchanged: "02",
-} as const;
-
 /** Turns the flattened indoor `dgc_status` tree, read with `md`, into a
  * `DaikinState`. Every value is per mode: the setpoint, humidity, fan speed and
  * louvers each have a leaf for each mode, and the state reads the current
@@ -400,10 +395,10 @@ export function applyDsiotControl(
       path: DSIOT_PATHS.powerTransition,
       value:
         power === currentPower
-          ? POWER_TRANSITIONS.unchanged
+          ? DSIOT_POWER_TRANSITION_CODES.unchanged
           : power
-            ? POWER_TRANSITIONS.turningOn
-            : POWER_TRANSITIONS.turningOff,
+            ? DSIOT_POWER_TRANSITION_CODES.turningOn
+            : DSIOT_POWER_TRANSITION_CODES.turningOff,
     },
     {
       path: DSIOT_PATHS.mode,

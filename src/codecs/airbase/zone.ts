@@ -1,18 +1,20 @@
 import type { DaikinZone } from "../../models/zone.js";
 import { decodeClassicText } from "../classic/keyValue.js";
 import { parseAirbaseZoneCount } from "./capabilities.js";
+import {
+  AIRBASE_ZONE_LIST_SEPARATOR,
+  AIRBASE_ZONE_TEMPERATURE_FIELDS,
+} from "./tables.js";
 
-// `get_zone_setting` answers the zones as lists joined by `;`, form-encoded:
-// their names in `zone_name`, and 1 or 0 for each in `zone_onoff`.
-const SEPARATOR = ";";
-// A unit that sets a temperature for each zone answers these two as well, and
+// `get_zone_setting` answers the zones as lists, form-encoded: their names in
+// `zone_name`, and 1 or 0 for each in `zone_onoff`. A unit that sets a
+// temperature for each zone answers the two temperature lists as well, and
 // takes them back with every write.
-const ZONE_TEMPERATURE_FIELDS = ["lztemp_c", "lztemp_h"];
 
 function decodeList(value: string | undefined): string[] {
   return value === undefined || value === ""
     ? []
-    : decodeClassicText(value).split(SEPARATOR);
+    : decodeClassicText(value).split(AIRBASE_ZONE_LIST_SEPARATOR);
 }
 
 /** Turns a `get_zone_setting` reply into the unit's zones, the first
@@ -49,10 +51,10 @@ export function applyAirbaseZone(
   const flags = decodeList(current.zone_onoff);
   flags[index] = enabled ? "1" : "0";
   const query: Record<string, string> = {
-    zone_name: decodeList(current.zone_name).join(SEPARATOR),
-    zone_onoff: flags.join(SEPARATOR),
+    zone_name: decodeList(current.zone_name).join(AIRBASE_ZONE_LIST_SEPARATOR),
+    zone_onoff: flags.join(AIRBASE_ZONE_LIST_SEPARATOR),
   };
-  for (const field of ZONE_TEMPERATURE_FIELDS) {
+  for (const field of Object.values(AIRBASE_ZONE_TEMPERATURE_FIELDS)) {
     const value = current[field];
     if (value !== undefined) {
       query[field] = decodeClassicText(value);

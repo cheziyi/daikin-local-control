@@ -44,6 +44,9 @@ describe("the DSIOT tables", () => {
       DSIOT_ON: "01",
       DSIOT_OFF: "00",
       DSIOT_COOLING_ONLY_MODEL_TYPE: "01",
+      DSIOT_HEAT_PUMP_MODEL_TYPE: "00",
+      DSIOT_LOCAL_PASSWORD_HEADER: "Authorization",
+      DSIOT_LOCAL_PASSWORD_SCHEME: "Basic",
       DSIOT_SPECIAL_MODE_PATHS: {
         powerful: "dgc_status.e_1003.e_3002.p_44",
         econo: "dgc_status.e_1002.e_3003.p_24",
@@ -91,6 +94,12 @@ describe("the DSIOT tables", () => {
         cool: "0200",
         auto: "0300",
         dehumidify: "0500",
+      },
+      DSIOT_OPERATING_MODE_ALIASES: { "0900": "cool", "0A00": "heat" },
+      DSIOT_POWER_TRANSITION_CODES: {
+        turningOn: "00",
+        turningOff: "01",
+        unchanged: "02",
       },
       DSIOT_FAN_SPEED_CODES: {
         auto: "0A00",

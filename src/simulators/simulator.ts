@@ -2,6 +2,10 @@ import { createSocket, type Socket } from "node:dgram";
 import { once } from "node:events";
 import { createServer, type IncomingHttpHeaders } from "node:http";
 import type { AddressInfo } from "node:net";
+import {
+  DAIKIN_DISCOVERY_PORT,
+  DAIKIN_DISCOVERY_PROBE,
+} from "../codecs/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
 import type {
   DaikinSensors,
@@ -11,9 +15,6 @@ import type {
 
 // What the simulators share: the HTTP server, and the reply to a discovery
 // probe, which every adapter sends in the same form.
-
-const DISCOVERY_PROBE = "DAIKIN_UDP/common/basic_info";
-const DISCOVERY_PORT = 30050;
 
 const DEFAULT_ADDRESS = "127.0.0.1";
 
@@ -251,7 +252,7 @@ async function startDiscoverySockets(
   const sockets = [own, every];
   for (const socket of sockets) {
     socket.on("message", (message, remote) => {
-      if (message.toString("utf8") === DISCOVERY_PROBE) {
+      if (message.toString("utf8") === DAIKIN_DISCOVERY_PROBE) {
         // Without a callback, a reply that fails to send is emitted as an
         // `error` nothing listens for.
         own.send(reply(), remote.port, remote.address, () => {});
@@ -259,11 +260,11 @@ async function startDiscoverySockets(
     });
   }
   try {
-    own.bind(DISCOVERY_PORT, address);
+    own.bind(DAIKIN_DISCOVERY_PORT, address);
     // `once` rejects when the socket emits `error` first, as it does for a
     // port another program holds.
     await once(own, "listening");
-    every.bind(DISCOVERY_PORT);
+    every.bind(DAIKIN_DISCOVERY_PORT);
     await once(every, "listening");
   } catch (error) {
     await Promise.all(sockets.map(closeSocket));
