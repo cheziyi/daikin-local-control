@@ -200,6 +200,21 @@ describe("parseDsiotState", () => {
     ).toEqual(["econo"]);
   });
 
+  it("reads heat plus as on in heat alone", () => {
+    const heatPlus = { "dgc_status.e_1002.e_3003.p_1C": "01" };
+
+    expect(
+      parseDsiotState({
+        ...INDOOR_STATUS,
+        [DSIOT_PATHS.mode]: "0100",
+        ...heatPlus,
+      }).specialModes,
+    ).toEqual(["heatPlus"]);
+    expect(
+      parseDsiotState({ ...INDOOR_STATUS, ...heatPlus }).specialModes,
+    ).toEqual([]);
+  });
+
   it("reads each value from the current mode's own leaves", () => {
     expect(
       parseDsiotState({

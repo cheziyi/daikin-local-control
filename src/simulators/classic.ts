@@ -21,7 +21,11 @@ import {
 } from "../codecs/classic/tables.js";
 import { DAIKIN_TERMINAL_UUID_HEADER } from "../codecs/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
-import type { DaikinSensors, DaikinState } from "../models/state.js";
+import type {
+  DaikinSensors,
+  DaikinState,
+  SpecialMode,
+} from "../models/state.js";
 import {
   type DaikinSimulator,
   type DaikinSimulatorRequest,
@@ -64,7 +68,7 @@ const DEFAULT_MODEL_INFO: Record<string, string> = {
   en_fdir: "1",
   s_fdir: "3",
   s_humd: "0",
-  en_spmode: "7",
+  en_spmode: "15",
   elec: "1",
   dmnd: "1",
   en_scdltmr: "1",
@@ -127,17 +131,15 @@ const MODE_MEMORY_FIELDS = {
   dfd: "f_dir",
 } as const;
 
-// `spmode_kind` 4 is heat plus, which `adv` reports as 4. It is outside
-// `SpecialMode`: see UNSUPPORTED.md.
-const HEAT_PLUS_KIND_CODE = "4";
-const HEAT_PLUS_ADV_CODE = "4";
-// Powerful, econo and heat plus replace one another in `adv`.
-const ADV_CODES_BY_SPECIAL_MODE_KIND: Record<string, string> = {
-  [CLASSIC_SPECIAL_MODE_KIND_CODES.powerful]:
-    CLASSIC_SPECIAL_MODE_ADV_CODES.powerful,
-  [CLASSIC_SPECIAL_MODE_KIND_CODES.econo]: CLASSIC_SPECIAL_MODE_ADV_CODES.econo,
-  [HEAT_PLUS_KIND_CODE]: HEAT_PLUS_ADV_CODE,
-};
+// The modes `set_special_mode` takes as a `spmode_kind` replace one another
+// in `adv`.
+const ADV_CODES_BY_SPECIAL_MODE_KIND: Record<string, string> =
+  Object.fromEntries(
+    Object.entries(CLASSIC_SPECIAL_MODE_KIND_CODES).map(([mode, kind]) => [
+      kind,
+      CLASSIC_SPECIAL_MODE_ADV_CODES[mode as SpecialMode],
+    ]),
+  );
 
 // A sensor field the unit has no reading for.
 const NO_READING = "-";
@@ -151,7 +153,7 @@ export interface ClassicSimulatorUnit extends DaikinSimulatorUnit {
 
 export interface StartClassicSimulatorOptions extends StartSimulatorOptions {
   /** What the unit has. Defaults to a heat pump with every fan speed, swing
-   * on both axes and all three special modes. A field of `modelInfo`
+   * on both axes and all four special modes. A field of `modelInfo`
    * replaces what this sets. */
   unit?: ClassicSimulatorUnit;
   /** Fields added to the `/common/basic_info` reply, each replacing a default

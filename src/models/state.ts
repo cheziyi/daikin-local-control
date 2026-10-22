@@ -80,8 +80,14 @@ export type HumiditySetting = (typeof HUMIDITY_SETTINGS)[number];
  * `DaikinCapabilities.targetHumidities` lists which of them a unit takes. */
 export type TargetHumidity = HumiditySetting | { percent: number };
 
-export const SPECIAL_MODES = ["powerful", "econo", "streamer"] as const;
+export const SPECIAL_MODES = [
+  "powerful",
+  "econo",
+  "streamer",
+  "heatPlus",
+] as const;
 
+/** `heatPlus` is taken in heat alone. */
 export type SpecialMode = (typeof SPECIAL_MODES)[number];
 
 export interface DaikinState {

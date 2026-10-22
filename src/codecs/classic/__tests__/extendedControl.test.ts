@@ -79,6 +79,13 @@ describe("encodeClassicSpecialMode", () => {
     });
   });
 
+  it("writes heat plus as spmode_kind=4", () => {
+    expect(encodeClassicSpecialMode("heatPlus", true)).toEqual({
+      set_spmode: "1",
+      spmode_kind: "4",
+    });
+  });
+
   it("writes streamer as en_streamer alone", () => {
     expect(encodeClassicSpecialMode("streamer", true)).toEqual({
       en_streamer: "1",

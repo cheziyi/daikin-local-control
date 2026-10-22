@@ -94,18 +94,19 @@ describe("parseDsiotCapabilities", () => {
       ).toEqual([]);
     });
 
-    it("lists econo in every mode but fan", () => {
+    it("lists econo in every mode but fan, and heat plus in heat alone", () => {
       expect(
         parseDsiotCapabilities({
           ...UNIT,
           "dgc_status.e_1003.e_3002.p_44.pt": "2",
           "dgc_status.e_1002.e_3003.p_24.pt": "2",
+          "dgc_status.e_1002.e_3003.p_1C.pt": "2",
         }).specialModes,
       ).toEqual({
         auto: ["powerful", "econo"],
         dehumidify: ["powerful", "econo"],
         cool: ["powerful", "econo"],
-        heat: ["powerful", "econo"],
+        heat: ["powerful", "econo", "heatPlus"],
         fan: ["powerful"],
       });
     });

@@ -73,7 +73,7 @@ export interface DaikinSimulatorUnit {
   /** The axes the louvers swing on: `vertical` moves the air up and down
    * alone, and `both` left and right as well. Defaults to `both`. */
   swing?: "none" | "vertical" | "both";
-  /** The special modes the unit takes. Defaults to all three. */
+  /** The special modes the unit takes. Defaults to all four. */
   specialModes?: readonly SpecialMode[];
   /** The setpoints cool takes. A classic adapter reports whole degrees.
    * Defaults to 18 to 32 on a DSIOT simulator, and to none reported on a

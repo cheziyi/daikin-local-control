@@ -183,7 +183,7 @@ label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPasswo
 | `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
 | `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto`, `floorWarming` or `circulating`, or `null` where the unit reports none |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
-| `specialModes` | Those of `powerful`, `econo` and `streamer` that are on, empty when none is |
+| `specialModes` | Those of `powerful`, `econo`, `streamer` and `heatPlus` that are on, empty when none is |
 
 `getCapabilities()` resolves with a `DaikinCapabilities`, which lists the
 values this unit takes under the plural of the state field each one limits:
@@ -405,7 +405,7 @@ Describe the adapter and its unit in the types the clients resolve with:
 | Option | Holds | Defaults to |
 | --- | --- | --- |
 | `deviceInfo` | `name`, `macAddress` and `firmwareVersion`, as `getDeviceInfo()` reads them | A name of `Simulator` |
-| `unit` | What the unit has: see below | A heat pump with every fan speed, swing on both axes and all three special modes |
+| `unit` | What the unit has: see below | A heat pump with every fan speed, swing on both axes and all four special modes |
 | `state` | Any fields of a `DaikinState`, `specialModes` included | Off, in cool at 24 °C, on the auto fan speed |
 | `sensors` | Any fields of a `DaikinSensors`; `null` is a reading the unit lacks | 26 °C and 55 % indoors, 30 °C outdoors |
 
@@ -415,7 +415,7 @@ Describe the adapter and its unit in the types the clients resolve with:
 | `fan` | `false` for a unit whose fan speed cannot be set | `true` |
 | `fanLevels` | 2, 3 or 5 fan levels. Classic simulator only | 5 |
 | `swing` | `none`, `vertical` or `both` | `both` |
-| `specialModes` | Those of `powerful`, `econo` and `streamer` the unit takes | All three |
+| `specialModes` | Those of `powerful`, `econo`, `streamer` and `heatPlus` the unit takes | All four |
 | `coolTemperaturesInC`, `heatTemperaturesInC` | `{ min, max }` | 18 to 32 and 10 to 30 |
 
 `setState()` and `setSensors()` change a running simulator the same way.

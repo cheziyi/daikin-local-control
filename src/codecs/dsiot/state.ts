@@ -347,7 +347,7 @@ function isHumidityOn(
  * `DaikinState`. Every value is per mode: the setpoint, humidity, fan speed and
  * louvers each have a leaf for each mode, and the state reads the current
  * mode's. Powerful is read from the outdoor tree, and reads as off without
- * it. */
+ * it. Heat plus reads as on in heat alone. */
 export function parseDsiotState(values: Record<string, string>): DaikinState {
   const mode = decodeDsiotMode(values[DSIOT_PATHS.mode]) ?? "auto";
   const paths = DSIOT_MODE_PATHS[mode];
@@ -363,7 +363,9 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
     verticalPosition: parseVerticalPosition(values, paths.vertical),
     horizontalPosition: parseHorizontalPosition(values[paths.horizontal]),
     specialModes: SPECIAL_MODES.filter(
-      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === DSIOT_ON,
+      (specialMode) =>
+        values[DSIOT_SPECIAL_MODE_PATHS[specialMode]] === DSIOT_ON &&
+        (specialMode !== "heatPlus" || mode === "heat"),
     ),
   };
 }

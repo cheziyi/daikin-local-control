@@ -100,25 +100,29 @@ export function parseClassicCapabilities(
   };
 }
 
-// Lists none for a unit that reports no `en_spmode`, and econo in every mode
-// but fan. The powerful and econo bits count only at `cpv=3` with a
-// `cpv_minor` other than `00`: see UNSUPPORTED.md.
+// Lists none for a unit that reports no `en_spmode`, econo in every mode but
+// fan, and heat plus in heat alone. The powerful, econo and heat plus bits
+// count only at `cpv=3` with a `cpv_minor` other than `00`: see
+// UNSUPPORTED.md.
 function specialModes(
   fields: Record<string, string>,
   cpv: string,
   offeredModes: OperatingMode[],
 ): Record<OperatingMode, SpecialMode[]> {
   const bits = Number.parseInt(fields.en_spmode ?? "", 10);
-  const followsPowerfulAndEcono =
-    cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
+  const countsBits = cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
   const taken = SPECIAL_MODES.filter(
     (specialMode) =>
       (bits & CLASSIC_SPECIAL_MODE_BITS[specialMode]) !== 0 &&
-      (specialMode === "streamer" || followsPowerfulAndEcono),
+      (specialMode === "streamer" || countsBits),
   );
   const inMode = (mode: OperatingMode) =>
     offeredModes.includes(mode)
-      ? taken.filter((specialMode) => mode !== "fan" || specialMode !== "econo")
+      ? taken.filter(
+          (specialMode) =>
+            (mode !== "fan" || specialMode !== "econo") &&
+            (mode === "heat" || specialMode !== "heatPlus"),
+        )
       : [];
   return {
     auto: inMode("auto"),

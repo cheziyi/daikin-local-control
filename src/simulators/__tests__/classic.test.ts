@@ -445,7 +445,7 @@ describe("ClassicDaikinClient against the simulator", () => {
         auto: ["powerful", "econo", "streamer"],
         dehumidify: ["powerful", "econo", "streamer"],
         cool: ["powerful", "econo", "streamer"],
-        heat: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer", "heatPlus"],
         fan: ["powerful", "streamer"],
       },
       specialOutlet: false,
@@ -575,10 +575,13 @@ describe("ClassicDaikinClient against the simulator", () => {
     const powerful = (await client.getState()).specialModes;
     await client.setSpecialMode("econo", true);
     const econo = (await client.getState()).specialModes;
-    await client.setSpecialMode("econo", false);
+    await client.setSpecialMode("heatPlus", true);
+    const heatPlus = (await client.getState()).specialModes;
+    await client.setSpecialMode("heatPlus", false);
 
     expect(powerful).toEqual(["powerful", "streamer"]);
     expect(econo).toEqual(["econo", "streamer"]);
+    expect(heatPlus).toEqual(["streamer", "heatPlus"]);
     expect((await client.getState()).specialModes).toEqual(["streamer"]);
   });
 

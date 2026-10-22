@@ -96,6 +96,7 @@ export const CLASSIC_SPECIAL_MODE_ADV_CODES: Record<SpecialMode, string> = {
   powerful: "2",
   econo: "12",
   streamer: "13",
+  heatPlus: "4",
 };
 
 /** `spmode_kind` in `set_special_mode`, which numbers the modes differently
@@ -106,14 +107,15 @@ export const CLASSIC_SPECIAL_MODE_KIND_CODES: Record<
 > = {
   powerful: "1",
   econo: "2",
+  heatPlus: "4",
 };
 
-/** `en_spmode` sets one bit for each special mode the unit takes. Bit 8 is a
- * mode outside `SpecialMode`. */
+/** `en_spmode` sets one bit for each special mode the unit takes. */
 export const CLASSIC_SPECIAL_MODE_BITS: Record<SpecialMode, number> = {
   powerful: 1,
   econo: 2,
   streamer: 4,
+  heatPlus: 8,
 };
 
 /** `type` in a discovery reply from an air conditioner's classic adapter. */

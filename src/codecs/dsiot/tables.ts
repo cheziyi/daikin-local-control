@@ -91,12 +91,13 @@ export const DSIOT_HEAT_PUMP_MODEL_TYPE = "00";
 export const DSIOT_LOCAL_PASSWORD_HEADER = "Authorization";
 export const DSIOT_LOCAL_PASSWORD_SCHEME = "Basic";
 
-/** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
- * edge. */
+/** Each leaf holds `01` while its mode is on, and has `pt` 2 on a unit that
+ * takes the mode. Powerful is on the outdoor edge. */
 export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
   powerful: "dgc_status.e_1003.e_3002.p_44",
   econo: "dgc_status.e_1002.e_3003.p_24",
   streamer: "dgc_status.e_1002.e_3003.p_20",
+  heatPlus: "dgc_status.e_1002.e_3003.p_1C",
 };
 
 export interface DsiotSetpoint {

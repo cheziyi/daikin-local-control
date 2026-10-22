@@ -35,6 +35,7 @@ describe("parseClassicState", () => {
     ["12", ["econo"]],
     ["13", ["streamer"]],
     ["13/2", ["powerful", "streamer"]],
+    ["4", ["heatPlus"]],
     ["", []],
   ] as const)("reads adv=%s as the special modes %j", (adv, specialModes) => {
     expect(parseClassicState({ adv }).specialModes).toEqual(specialModes);

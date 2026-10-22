@@ -97,6 +97,7 @@ const SPECIAL_MODE_ADDRESSES: Record<SpecialMode, string> = {
   powerful: statusAddress(DSIOT_SPECIAL_MODE_PATHS.powerful),
   econo: statusAddress(DSIOT_SPECIAL_MODE_PATHS.econo),
   streamer: statusAddress(DSIOT_SPECIAL_MODE_PATHS.streamer),
+  heatPlus: statusAddress(DSIOT_SPECIAL_MODE_PATHS.heatPlus),
 };
 const ADAPTER_NAME_ADDRESS = adapterAddress(DSIOT_ADAPTER_PATHS.name);
 const ADAPTER_MAC_ADDRESS = adapterAddress(DSIOT_ADAPTER_PATHS.macAddress);
@@ -178,7 +179,7 @@ export interface DsiotSimulatorLeaf {
 
 export interface StartDsiotSimulatorOptions extends StartSimulatorOptions {
   /** What the unit has. Defaults to a heat pump with every fan speed, five
-   * fixed vertical louver positions, swing on both axes and all three special
+   * fixed vertical louver positions, swing on both axes and all four special
    * modes. A leaf in `leaves` replaces what this sets. */
   unit?: DaikinSimulatorUnit;
   /** Leaves added to the adapter's, each replacing a default at the same
@@ -714,6 +715,7 @@ function defaultLeaves(): Leaves {
     [statusAddress(DSIOT_PATHS.energyMonitoring)]: reported(DSIOT_ON),
     [SPECIAL_MODE_ADDRESSES.econo]: written(DSIOT_OFF),
     [SPECIAL_MODE_ADDRESSES.streamer]: written(DSIOT_OFF),
+    [SPECIAL_MODE_ADDRESSES.heatPlus]: written(DSIOT_OFF),
 
     [MODE_ADDRESS]: written(DSIOT_OPERATING_MODE_CODES.cool),
     ...setpoint("cool", 24, 18, 32),

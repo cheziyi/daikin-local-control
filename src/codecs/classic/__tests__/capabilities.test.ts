@@ -460,14 +460,14 @@ describe("parseClassicCapabilities", () => {
       },
     );
 
-    it("lists econo in every mode but fan", () => {
+    it("lists econo in every mode but fan, and heat plus in heat alone", () => {
       expect(
-        parseClassicCapabilities({ ...MINOR, en_spmode: "7" }).specialModes,
+        parseClassicCapabilities({ ...MINOR, en_spmode: "15" }).specialModes,
       ).toEqual({
         auto: ["powerful", "econo", "streamer"],
         dehumidify: ["powerful", "econo", "streamer"],
         cool: ["powerful", "econo", "streamer"],
-        heat: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer", "heatPlus"],
         fan: ["powerful", "streamer"],
       });
     });

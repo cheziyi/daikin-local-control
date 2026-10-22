@@ -50,7 +50,8 @@ type LouverAxis = "vertical" | "horizontal";
  * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
  * degrees, and the auto range caps at 30 °C whatever its `md.mx` says.
  * Without the outdoor tree, `specialModes` lists no `powerful`. It lists
- * econo in every mode but fan: see UNSUPPORTED.md. */
+ * heat plus in heat alone, and econo in every mode but fan: see
+ * UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
 ): DaikinCapabilities {
@@ -75,7 +76,9 @@ export function parseDsiotCapabilities(
   const specialModes = (mode: OperatingMode) =>
     modes.includes(mode)
       ? takenSpecialModes.filter(
-          (specialMode) => mode !== "fan" || specialMode !== "econo",
+          (specialMode) =>
+            (mode !== "fan" || specialMode !== "econo") &&
+            (mode === "heat" || specialMode !== "heatPlus"),
         )
       : [];
   const vertical = hasLouver(values, "vertical");

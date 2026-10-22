@@ -52,6 +52,7 @@ describe("the DSIOT tables", () => {
         powerful: "dgc_status.e_1003.e_3002.p_44",
         econo: "dgc_status.e_1002.e_3003.p_24",
         streamer: "dgc_status.e_1002.e_3003.p_20",
+        heatPlus: "dgc_status.e_1002.e_3003.p_1C",
       },
       DSIOT_MODE_NODE: "dgc_status.e_1002.e_3001",
       DSIOT_MODE_PATHS: {
