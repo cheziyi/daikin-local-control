@@ -113,6 +113,20 @@ const DEFAULT_REMOTE_METHOD: Record<string, string> = {
   notice_sync_int: "60",
 };
 
+const DEFAULT_DEMAND_CONTROL: Record<string, string> = {
+  demand_type: "1",
+  en_demand: "0",
+  mode: "0",
+  max_pow: "100",
+};
+
+const DEFAULT_PRICE: Record<string, string> = {
+  price_int: "0",
+  price_dec: "00",
+};
+
+const DEFAULT_TARGET: Record<string, string> = { target: "0" };
+
 const REGISTER_TERMINAL_PATH = "/common/register_terminal";
 
 // A `set_control_info` without one of these is answered `PARAM NG`. `shum`
@@ -195,6 +209,12 @@ export interface ClassicDaikinSimulator extends DaikinSimulator {
   readonly sensorInfo: Record<string, string>;
   /** What `/common/get_remote_method` answers. */
   readonly remoteMethod: Record<string, string>;
+  /** What `/aircon/get_demand_control` answers. */
+  readonly demandControl: Record<string, string>;
+  /** What `/aircon/get_price` answers. */
+  readonly price: Record<string, string>;
+  /** What `/aircon/get_target` answers. */
+  readonly target: Record<string, string>;
   /** The terminal uuids `/common/register_terminal` has registered. Only an
    * adapter started with a `key` checks them. */
   readonly registeredTerminalUuids: Set<string>;
@@ -222,6 +242,9 @@ export async function startClassicSimulator(
   const controlInfo = { ...DEFAULT_CONTROL_INFO, ...options.controlInfo };
   const sensorInfo = { ...DEFAULT_SENSOR_INFO, ...options.sensorInfo };
   const remoteMethod = { ...DEFAULT_REMOTE_METHOD };
+  const demandControl = { ...DEFAULT_DEMAND_CONTROL };
+  const price = { ...DEFAULT_PRICE };
+  const target = { ...DEFAULT_TARGET };
   const registeredTerminalUuids = new Set<string>();
 
   const setState = (state: Partial<DaikinState>) =>
@@ -244,6 +267,9 @@ export async function startClassicSimulator(
     "/aircon/get_model_info": () => modelInfo,
     "/aircon/get_control_info": () => controlInfo,
     "/aircon/get_sensor_info": () => sensorInfo,
+    "/aircon/get_demand_control": () => demandControl,
+    "/aircon/get_price": () => price,
+    "/aircon/get_target": () => target,
   };
 
   // Each write returns false for a request that lacks a parameter.
@@ -291,9 +317,11 @@ export async function startClassicSimulator(
       return true;
     },
     "/aircon/set_demand_control": (query) =>
-      hasEvery(query, ["demand_type", "en_demand", "mode", "max_pow"]),
-    "/aircon/set_price": (query) => hasEvery(query, ["price_int", "price_dec"]),
-    "/aircon/set_target": (query) => hasEvery(query, ["target"]),
+      copy(query, demandControl, Object.keys(DEFAULT_DEMAND_CONTROL)),
+    "/aircon/set_price": (query) =>
+      copy(query, price, Object.keys(DEFAULT_PRICE)),
+    "/aircon/set_target": (query) =>
+      copy(query, target, Object.keys(DEFAULT_TARGET)),
     "/common/set_led": (query) => copy(query, basicInfo, ["led"]),
     "/common/set_holiday": (query) => copy(query, basicInfo, ["en_hol"]),
     "/common/set_icon": (query) => copy(query, basicInfo, ["icon"]),
@@ -398,6 +426,9 @@ export async function startClassicSimulator(
     controlInfo,
     sensorInfo,
     remoteMethod,
+    demandControl,
+    price,
+    target,
     registeredTerminalUuids,
     setState,
     setSensors,

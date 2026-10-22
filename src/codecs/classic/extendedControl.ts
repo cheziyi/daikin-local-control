@@ -1,5 +1,6 @@
 import type {
   DemandControl,
+  DemandMode,
   DeviceGroup,
   DeviceMetadata,
   TerminalScope,
@@ -17,6 +18,13 @@ import {
 // endpoint takes, and reads each one back from the reply that reports it.
 
 const REMOTE_METHOD_INTERVALS = ["notice_ip_int", "notice_sync_int"];
+
+const DEMAND_MODES_BY_CODE: Record<string, DemandMode> = Object.fromEntries(
+  Object.entries(CLASSIC_DEMAND_MODE_CODES).map(([mode, code]) => [
+    code,
+    mode as DemandMode,
+  ]),
+);
 
 export function encodeClassicLed(on: boolean): Record<string, string> {
   return { led: flag(on) };
@@ -52,6 +60,42 @@ export function encodeClassicDemandControl(
     mode: CLASSIC_DEMAND_MODE_CODES[demand.mode],
     max_pow: String(demand.maxPowerInPercent),
   };
+}
+
+/** Reads demand control from a `get_demand_control` reply: `null` when it
+ * carries no `en_demand` or `max_pow`, or a `mode` outside `DemandMode`, such
+ * as the schedule mode. */
+export function parseClassicDemandControl(
+  fields: Record<string, string>,
+): DemandControl | null {
+  const mode = DEMAND_MODES_BY_CODE[fields.mode ?? ""];
+  const maxPowerInPercent = parseNumber(fields.max_pow);
+  if (fields.en_demand === undefined || mode === undefined) {
+    return null;
+  }
+  return maxPowerInPercent === null
+    ? null
+    : { enabled: fields.en_demand === "1", maxPowerInPercent, mode };
+}
+
+/** Reads the price from a `get_price` reply, whole units in `price_int` and
+ * hundredths in `price_dec`: `null` when it lacks either. */
+export function parseClassicEnergyPrice(
+  fields: Record<string, string>,
+): number | null {
+  const whole = parseNumber(fields.price_int);
+  const hundredths = parseNumber(fields.price_dec);
+  return whole === null || hundredths === null
+    ? null
+    : whole + hundredths / 100;
+}
+
+/** Reads the target from a `get_target` reply: `null` when it carries no
+ * `target`. */
+export function parseClassicEnergyTarget(
+  fields: Record<string, string>,
+): number | null {
+  return parseNumber(fields.target);
 }
 
 export function encodeClassicSpecialMode(
@@ -164,4 +208,12 @@ function flag(on: boolean): string {
 
 function parseFlag(value: string | undefined): boolean | null {
   return value === undefined ? null : value === "1";
+}
+
+function parseNumber(value: string | undefined): number | null {
+  if (value === undefined || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }

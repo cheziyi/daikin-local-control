@@ -12,6 +12,9 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
+  parseClassicDemandControl,
+  parseClassicEnergyPrice,
+  parseClassicEnergyTarget,
   parseClassicHolidayMode,
   parseClassicLed,
   parseClassicMetadata,
@@ -257,5 +260,55 @@ describe("parseClassicMetadata", () => {
       name: "",
       enabled: false,
     });
+  });
+});
+
+describe("parseClassicDemandControl", () => {
+  it("reads en_demand, max_pow and the mode", () => {
+    expect(
+      parseClassicDemandControl({
+        demand_type: "1",
+        en_demand: "1",
+        mode: "2",
+        max_pow: "85",
+      }),
+    ).toEqual({ enabled: true, maxPowerInPercent: 85, mode: "auto" });
+    expect(
+      parseClassicDemandControl({ en_demand: "0", mode: "0", max_pow: "100" }),
+    ).toEqual({ enabled: false, maxPowerInPercent: 100, mode: "manual" });
+  });
+
+  it("reads null without en_demand or max_pow, or with a mode outside the model", () => {
+    expect(parseClassicDemandControl({ mode: "0", max_pow: "70" })).toBeNull();
+    expect(parseClassicDemandControl({ en_demand: "1", mode: "0" })).toBeNull();
+    expect(
+      parseClassicDemandControl({ en_demand: "1", mode: "1", max_pow: "70" }),
+    ).toBeNull();
+    expect(parseClassicDemandControl({})).toBeNull();
+  });
+});
+
+describe("parseClassicEnergyPrice", () => {
+  it("reads price_int and price_dec as units and hundredths", () => {
+    expect(parseClassicEnergyPrice({ price_int: "1", price_dec: "05" })).toBe(
+      1.05,
+    );
+    expect(parseClassicEnergyPrice({ price_int: "0", price_dec: "30" })).toBe(
+      0.3,
+    );
+  });
+
+  it("reads null without either field", () => {
+    expect(parseClassicEnergyPrice({ price_int: "1" })).toBeNull();
+    expect(parseClassicEnergyPrice({ price_dec: "05" })).toBeNull();
+    expect(parseClassicEnergyPrice({})).toBeNull();
+  });
+});
+
+describe("parseClassicEnergyTarget", () => {
+  it("reads the target, and null without one or for one that is not a number", () => {
+    expect(parseClassicEnergyTarget({ target: "120" })).toBe(120);
+    expect(parseClassicEnergyTarget({ target: "-" })).toBeNull();
+    expect(parseClassicEnergyTarget({})).toBeNull();
   });
 });

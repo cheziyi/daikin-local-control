@@ -658,6 +658,33 @@ describe("ClassicDaikinClient against the simulator", () => {
     ]);
   });
 
+  it("reads back the demand control, energy price and target it set", async () => {
+    const simulator = await simulatorWith();
+    const client = clientFor(simulator);
+
+    expect(await client.getDemandControl()).toEqual({
+      enabled: false,
+      maxPowerInPercent: 100,
+      mode: "manual",
+    });
+
+    await client.setDemandControl({
+      enabled: true,
+      maxPowerInPercent: 85,
+      mode: "auto",
+    });
+    await client.setEnergyPrice(1.05);
+    await client.setEnergyTarget(120);
+
+    expect(await client.getDemandControl()).toEqual({
+      enabled: true,
+      maxPowerInPercent: 85,
+      mode: "auto",
+    });
+    expect(await client.getEnergyPrice()).toBe(1.05);
+    expect(await client.getEnergyTarget()).toBe(120);
+  });
+
   it("is rejected with status 403 until it registers its terminal", async () => {
     const simulator = await simulatorWith({ key: "0123456789012" });
     const client = clientFor(simulator);

@@ -273,6 +273,7 @@ if (client instanceof ClassicDaikinClient) {
   });
   await client.setOutOfHomeAccess(false); // home network only
   await client.setEnergyPrice(0.3); // per kWh
+  await client.setEnergyTarget(120); // a month's cost, in the price's currency
   await client.setMetadata({
     name: "Living Room",
     group: { name: "Upstairs", enabled: true },
@@ -290,6 +291,8 @@ Read a setting back with the matching `get` method:
 | --- | --- |
 | `getLed()`, `getHolidayMode()`, `getOutOfHomeAccess()` | `true` or `false`, or `null` when the adapter does not report it |
 | `getMetadata()` | `{ name, icon, group }`, without the fields the adapter does not report |
+| `getDemandControl()` | `{ enabled, maxPowerInPercent, mode }`, or `null` when the adapter reports none or a mode outside `manual` and `auto` |
+| `getEnergyPrice()`, `getEnergyTarget()` | A number, or `null` when the adapter does not report it |
 
 [UNSUPPORTED.md](UNSUPPORTED.md) lists the endpoints without a typed method and
 what is not known about each.

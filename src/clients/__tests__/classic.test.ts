@@ -503,6 +503,27 @@ describe("ClassicDaikinClient", () => {
           group: { name: "Upstairs", enabled: true },
         },
       ],
+      [
+        "getDemandControl",
+        (client) => client.getDemandControl(),
+        "/aircon/get_demand_control",
+        "ret=OK,demand_type=1,en_demand=1,mode=2,max_pow=85",
+        { enabled: true, maxPowerInPercent: 85, mode: "auto" },
+      ],
+      [
+        "getEnergyPrice",
+        (client) => client.getEnergyPrice(),
+        "/aircon/get_price",
+        "ret=OK,price_int=0,price_dec=30",
+        0.3,
+      ],
+      [
+        "getEnergyTarget",
+        (client) => client.getEnergyTarget(),
+        "/aircon/get_target",
+        "ret=OK,target=120",
+        120,
+      ],
     ])(
       "%s sends one GET to its endpoint and reads the reply",
       async (_method, call, path, body, expected) => {
