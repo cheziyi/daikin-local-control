@@ -1,5 +1,6 @@
 import { createSocket, type Socket } from "node:dgram";
 import { once } from "node:events";
+import { networkInterfaces } from "node:os";
 import { isAirbaseAdapter } from "./clients/airbase.js";
 import {
   isClassicOk,
@@ -19,7 +20,7 @@ const FIRST_DISCOVERY_SEND_PORT = 30000;
 const LAST_DISCOVERY_SEND_PORT = DAIKIN_DISCOVERY_PORT;
 
 const DEFAULT_DISCOVERY_TIMEOUT_IN_MS = 3_000;
-const BROADCAST_ADDRESS = "255.255.255.255";
+const LIMITED_BROADCAST_ADDRESS = "255.255.255.255";
 // UDP drops packets, so the probe goes out 10 times, 200 ms apart.
 const PROBE_COUNT = 10;
 const PROBE_INTERVAL_IN_MS = 200;
@@ -33,10 +34,11 @@ export interface DiscoverDevicesOptions {
   timeoutInMs?: number;
 }
 
-/** Finds the air conditioners' adapters on the LAN: broadcasts
- * `DAIKIN_UDP/common/basic_info` to UDP port 30050 and collects the
- * `basic_info` replies, which carry the same `key=value` payload as the HTTP
- * `/common/basic_info`. Classic and DSIOT adapters both answer, and
+/** Finds the air conditioners' adapters on the LAN: sends
+ * `DAIKIN_UDP/common/basic_info` to UDP port 30050 at `255.255.255.255` and
+ * at the broadcast address of each IPv4 network this machine is on, and
+ * collects the `basic_info` replies, which carry the same `key=value` payload
+ * as the HTTP `/common/basic_info`. Classic and DSIOT adapters both answer, and
  * `parseDevice` picks the protocol from the reply. Anything on the LAN can
  * send to the port it listens on, so it ignores a datagram whose `ret` is not
  * `OK`. The adapter of another appliance answers the probe as well, such as an
@@ -59,13 +61,16 @@ export async function discoverDevices(
 ): Promise<DaikinDevice[]> {
   const socket = await bindFirstFreePort();
   const devices = new Map<string, Promise<DaikinDevice>>();
+  const addresses = broadcastAddresses();
 
   return new Promise((resolve, reject) => {
     let probesSent = 0;
 
     const probe = Buffer.from(DAIKIN_DISCOVERY_PROBE, "utf8");
     const sendProbe = () => {
-      socket.send(probe, DAIKIN_DISCOVERY_PORT, BROADCAST_ADDRESS);
+      for (const address of addresses) {
+        socket.send(probe, DAIKIN_DISCOVERY_PORT, address);
+      }
       probesSent += 1;
       if (probesSent >= PROBE_COUNT) {
         clearInterval(probeTimer);
@@ -132,6 +137,29 @@ async function identifyProtocol(device: DaikinDevice): Promise<DaikinDevice> {
   } finally {
     await transport.dispose();
   }
+}
+
+// The machine sends a limited broadcast out of one interface alone, so each
+// probe also goes to the directed broadcast address of every IPv4 network the
+// machine is on: see DESIGN.md#discovery.
+function broadcastAddresses(): string[] {
+  const addresses = new Set([LIMITED_BROADCAST_ADDRESS]);
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const { address, netmask, family, internal } of entries ?? []) {
+      if (family === "IPv4" && !internal) {
+        addresses.add(directedBroadcastAddress(address, netmask));
+      }
+    }
+  }
+  return [...addresses];
+}
+
+function directedBroadcastAddress(address: string, netmask: string): string {
+  const mask = netmask.split(".").map(Number);
+  return address
+    .split(".")
+    .map((octet, index) => Number(octet) | (~(mask[index] ?? 0xff) & 0xff))
+    .join(".");
 }
 
 // Binds without `reuseAddr`: with it, a second socket binds a port that is

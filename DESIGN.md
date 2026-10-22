@@ -65,6 +65,15 @@ Rejected: port 30000 alone, bound with `reuseAddr`.
   of the two sockets alone. One call resolved with every adapter and the other
   with none, and neither rejected.
 
+`discoverDevices` sends each probe to `255.255.255.255` and to the broadcast
+address of every IPv4 network the machine is on.
+
+Rejected: `255.255.255.255` alone.
+
+- The machine sends a limited broadcast out of one interface, the one its
+  default route uses, so an adapter on a second network, such as Wi-Fi beside
+  a wired one, never hears the probe.
+
 `discoverDevices` asks each adapter that replies as a classic one, over HTTP,
 whether it is an Airbase adapter: `isAirbaseAdapter` takes HTTP 404 at
 `/common/basic_info` with `ret=OK` at `/skyfi/common/basic_info` for one.

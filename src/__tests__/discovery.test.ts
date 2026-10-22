@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { discoverDevices } from "../discovery.js";
 
 const createSocket = vi.hoisted(() => vi.fn());
+const networkInterfaces = vi.hoisted(() => vi.fn());
 const isAirbaseAdapter = vi.hoisted(() => vi.fn());
 const transports = vi.hoisted(
   () => [] as { options: unknown; dispose: ReturnType<typeof vi.fn> }[],
@@ -11,6 +12,9 @@ const transports = vi.hoisted(
 // `discoverDevices` binds a UDP port and broadcasts to the whole LAN, so the
 // tests give it a socket that does neither.
 vi.mock("node:dgram", () => ({ createSocket }));
+// It sends a probe to each network this machine is on, so the tests say
+// which networks it is on: loopback alone, unless a test gives it another.
+vi.mock("node:os", () => ({ networkInterfaces }));
 // It asks each classic adapter over HTTP whether it is an Airbase adapter, so
 // the tests answer for the adapter.
 vi.mock("../clients/airbase.js", () => ({ isAirbaseAdapter }));
@@ -61,6 +65,13 @@ function addressInUse(): Error {
   return Object.assign(new Error("bind EADDRINUSE"), { code: "EADDRINUSE" });
 }
 
+const LOOPBACK = {
+  address: "127.0.0.1",
+  netmask: "255.0.0.0",
+  family: "IPv4",
+  internal: true,
+};
+
 let socket: FakeSocket;
 
 beforeEach(() => {
@@ -68,6 +79,8 @@ beforeEach(() => {
   socket = new FakeSocket();
   createSocket.mockReset();
   createSocket.mockReturnValue(socket);
+  networkInterfaces.mockReset();
+  networkInterfaces.mockReturnValue({ lo0: [LOOPBACK] });
   isAirbaseAdapter.mockReset();
   isAirbaseAdapter.mockResolvedValue(false);
   transports.length = 0;
@@ -85,11 +98,54 @@ describe("discoverDevices", () => {
     expect(createSocket).toHaveBeenCalledWith("udp4");
     expect(socket.bind).toHaveBeenCalledWith(30000);
     expect(socket.setBroadcast).toHaveBeenCalledWith(true);
-    expect(socket.send).toHaveBeenCalledWith(
-      Buffer.from("DAIKIN_UDP/common/basic_info", "utf8"),
-      30050,
+    expect(socket.send.mock.calls).toEqual([
+      [
+        Buffer.from("DAIKIN_UDP/common/basic_info", "utf8"),
+        30050,
+        "255.255.255.255",
+      ],
+    ]);
+
+    await vi.runAllTimersAsync();
+    await discovery;
+  });
+
+  it("sends each probe to the broadcast address of each IPv4 network this machine is on as well", async () => {
+    networkInterfaces.mockReturnValue({
+      lo0: [LOOPBACK],
+      en0: [
+        {
+          address: "192.168.1.10",
+          netmask: "255.255.255.0",
+          family: "IPv4",
+          internal: false,
+        },
+        {
+          address: "fe80::1",
+          netmask: "ffff:ffff:ffff:ffff::",
+          family: "IPv6",
+          internal: false,
+        },
+      ],
+      en1: [
+        {
+          address: "10.0.5.7",
+          netmask: "255.255.248.0",
+          family: "IPv4",
+          internal: false,
+        },
+      ],
+      utun0: undefined,
+    });
+
+    const discovery = discoverDevices();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(socket.send.mock.calls.map(([, , address]) => address)).toEqual([
       "255.255.255.255",
-    );
+      "192.168.1.255",
+      "10.0.7.255",
+    ]);
 
     await vi.runAllTimersAsync();
     await discovery;

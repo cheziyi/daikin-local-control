@@ -89,7 +89,7 @@ such as `1.2.51`, when the adapter reports them: key a stored device on
 | It | So |
 | --- | --- |
 | Resolves after `timeoutInMs`, never earlier | Pass `discoverDevices({ timeoutInMs: 1000 })` to wait less than the default 3000 |
-| Broadcasts to `255.255.255.255` | It does not find an adapter on another subnet or VLAN |
+| Broadcasts to `255.255.255.255`, and to the broadcast address of each network this machine is on | It finds an adapter on each of those networks, and none on another subnet or VLAN |
 | Keeps the adapters of air conditioners alone | It leaves out the adapter of an air cleaner, a water heater or another appliance, which answers the same broadcast |
 | Asks each classic adapter over HTTP whether it is an Airbase adapter, which replies to the broadcast as a classic one does | It resolves later than `timeoutInMs` while an adapter is slow to answer, by 3000 ms at most for each request after up to 750 ms of retrying a dropped connection, and reports as `classic` one that does not answer. An Airbase device requires no registration and no child lock code, whatever the adapter's reply says |
 | Binds the first free UDP port from 30000 to 30050 | Calls made at the same time each get every reply. It rejects with the socket's error when none of the ports is free, or when the socket fails |
