@@ -21,7 +21,8 @@ export interface CreateDaikinClientOptions {
    * so it is neither checked nor sent to one. */
   terminalUuid: string;
   /** The child lock code, for a device whose `requiresLocalPassword` is true.
-   * It is not sent to an Airbase adapter, which takes none. */
+   * It is not sent to an Airbase adapter, which takes none. Defaults to none:
+   * no request carries one. */
   localPassword?: string;
   /** How long, in milliseconds, a request waits for the adapter. Defaults to
    * 10000: see `DaikinTransportOptions.timeoutInMs`. */
@@ -37,7 +38,8 @@ export interface CreateDaikinClientOptions {
    * on the remote control since that reply: see
    * DESIGN.md#the-read-before-a-write. */
   maxStateAgeForSetStateInMs?: number;
-  /** HTTPS adapters only. Without a CA the adapter's certificate isn't verified. */
+  /** HTTPS adapters only. Defaults to none, so the adapter's certificate is
+   * not verified: see `DaikinTlsOptions.ca`. */
   tls?: DaikinTlsOptions;
 }
 

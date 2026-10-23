@@ -1,5 +1,8 @@
 pre-commit:
   commands:
     fix:
+      # A commit whose staged files Biome does not handle, such as Markdown
+      # alone, must not fail: the first flag passes when none matched, and the
+      # second skips a file of a kind Biome does not know.
       run: pnpm fix --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true

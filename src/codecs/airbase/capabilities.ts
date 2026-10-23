@@ -6,10 +6,14 @@ import {
   type FanSpeed,
   OPERATING_MODES,
   type OperatingMode,
-  SWING_MODES,
+  type VerticalPosition,
 } from "../../models/state.js";
+import { AIRBASE_VERTICAL_POSITION_CODES } from "./tables.js";
 
 const ALWAYS_OFFERED_MODES: readonly OperatingMode[] = ["cool", "heat", "fan"];
+const VERTICAL_POSITIONS = Object.keys(
+  AIRBASE_VERTICAL_POSITION_CODES,
+) as VerticalPosition[];
 const THREE_FAN_LEVELS: FanSpeed[] = ["level1", "level3", "level5"];
 const TWO_FAN_LEVELS: FanSpeed[] = ["level1", "level5"];
 
@@ -25,9 +29,12 @@ export function mergeAirbaseCapabilityFields(
 
 /** Turns the field map from `mergeAirbaseCapabilityFields` into
  * `DaikinCapabilities`. A unit with zones (`en_zone`) takes no `auto` fan
- * speed and no direction. It lists no humidity setting, louver position or
- * special mode, and reports `energyMonitoring` and `demandControl` as
- * `false`: which field says a unit has either is not known. */
+ * speed and no direction; one without takes the vertical louver positions
+ * `position1` to `position5` and `swing` when `en_fdir` is 1, and no
+ * `swingMode`: `setState` sets the louver through `verticalPosition`. It
+ * lists no humidity setting, horizontal position or special mode, and
+ * reports `energyMonitoring` and `demandControl` as `false`: which field says
+ * a unit has either is not known. */
 export function parseAirbaseCapabilities(
   fields: Record<string, string>,
 ): DaikinCapabilities {
@@ -44,9 +51,11 @@ export function parseAirbaseCapabilities(
   return {
     modes: offeredModes,
     fanSpeeds: fanSpeeds(fields),
-    swingModes:
-      !hasZones(fields) && fields.en_fdir === "1" ? [...SWING_MODES] : [],
-    verticalPositions: [],
+    swingModes: [],
+    verticalPositions:
+      !hasZones(fields) && fields.en_fdir === "1"
+        ? [...VERTICAL_POSITIONS]
+        : [],
     horizontalPositions: [],
     targetTemperaturesInC: {
       // Auto runs from the lowest setpoint of cool to the highest of heat.
@@ -86,6 +95,15 @@ export function takesAirbaseAirside(fields: Record<string, string>): boolean {
   return (
     isFanControllable(fields) && hasZones(fields) && fields.en_airside === "1"
   );
+}
+
+/** Whether a unit sets a temperature for each zone, read from the field map
+ * of `mergeAirbaseCapabilityFields`: `en_linear_zone=1`. Such a unit answers
+ * `lztemp_c` and `lztemp_h` in `get_zone_setting`. */
+export function setsAirbaseZoneTemperatures(
+  fields: Record<string, string>,
+): boolean {
+  return fields.en_linear_zone === "1";
 }
 
 /** How many zones a unit has, read from the field map of

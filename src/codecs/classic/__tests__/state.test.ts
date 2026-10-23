@@ -35,6 +35,7 @@ describe("parseClassicState", () => {
     ["12", ["econo"]],
     ["13", ["streamer"]],
     ["13/2", ["powerful", "streamer"]],
+    ["4", ["heatPlus"]],
     ["", []],
   ] as const)("reads adv=%s as the special modes %j", (adv, specialModes) => {
     expect(parseClassicState({ adv }).specialModes).toEqual(specialModes);
@@ -108,6 +109,7 @@ describe("parseClassicState", () => {
     ["N", "naturalWind"],
     ["A", "auto"],
     ["F", "floorWarming"],
+    ["C", "circulating"],
   ])("reads f_dir_ud=%s as %s", (f_dir_ud, expected) => {
     expect(parseClassicState({ f_dir_ud }).verticalPosition).toBe(expected);
   });
@@ -126,7 +128,7 @@ describe("parseClassicState", () => {
   });
 
   it("reads a louver value outside the model as null", () => {
-    const state = parseClassicState({ f_dir_ud: "C", f_dir_lr: "N" });
+    const state = parseClassicState({ f_dir_ud: "X", f_dir_lr: "N" });
 
     expect(state.verticalPosition).toBeNull();
     expect(state.horizontalPosition).toBeNull();
@@ -398,6 +400,69 @@ describe("applyClassicControl", () => {
         ).f_dir,
       ).toBe("3");
     });
+
+    it.each([
+      ["00", "0"],
+      ["0-", "0"],
+      ["S0", "1"],
+      ["S-", "1"],
+      ["0S", "2"],
+      ["SS", "3"],
+      ["F0", "6"],
+      ["F-", "6"],
+      ["3S", "0"],
+      ["AS", "0"],
+      ["A0", "0"],
+    ])(
+      "takes f_dir from the new mode's ndfd=%s when it reports no dfd",
+      (ndfd3, f_dir) => {
+        expect(
+          applyClassicControl(
+            { ...HEATING, ndfd3 },
+            { mode: "cool" },
+            DIRECTION,
+          ).f_dir,
+        ).toBe(f_dir);
+      },
+    );
+
+    it("counts a fixed position in ndfd as stop on an adp_kind=4 unit, unless it is subtype=qa", () => {
+      const memory = { ...HEATING, ndfd3: "3S" };
+      expect(
+        applyClassicControl(
+          memory,
+          { mode: "cool" },
+          { ...DIRECTION, adp_kind: "4" },
+        ).f_dir,
+      ).toBe("2");
+      expect(
+        applyClassicControl(
+          memory,
+          { mode: "cool" },
+          { ...DIRECTION, adp_kind: "4", subtype: "qa", s_fdir: "1" },
+        ).f_dir,
+      ).toBe("0");
+    });
+
+    it("prefers dfd to ndfd for f_dir", () => {
+      expect(
+        applyClassicControl(
+          { ...HEATING, dfd3: "1", ndfd3: "SS" },
+          { mode: "cool" },
+          DIRECTION,
+        ).f_dir,
+      ).toBe("1");
+    });
+
+    it("keeps the current f_dir when the new mode's ndfd is not two values", () => {
+      expect(
+        applyClassicControl(
+          { ...HEATING, f_dir: "2", ndfd3: "S" },
+          { mode: "cool" },
+          DIRECTION,
+        ).f_dir,
+      ).toBe("2");
+    });
   });
 
   it("writes auto as mode=1", () => {
@@ -532,6 +597,16 @@ describe("applyClassicControl", () => {
       ).toMatchObject({ f_dir: "0", f_dir_ud: "A", f_dir_lr: "A" });
     });
 
+    it("writes f_dir=6 with the floor warming position", () => {
+      expect(
+        applyClassicControl(
+          SWINGING_VERTICAL,
+          { verticalPosition: "floorWarming" },
+          THREE_D,
+        ),
+      ).toMatchObject({ f_dir: "6", f_dir_ud: "F", f_dir_lr: "0" });
+    });
+
     it("writes a position over the swing mode sent with it", () => {
       expect(
         applyClassicControl(
@@ -625,11 +700,11 @@ describe("applyClassicControl", () => {
     it("sends a louver value outside the model back as it came", () => {
       expect(
         applyClassicControl(
-          { ...SWINGING_VERTICAL, f_dir_ud: "C" },
+          { ...SWINGING_VERTICAL, f_dir_ud: "X" },
           { power: false },
           THREE_D,
         ).f_dir_ud,
-      ).toBe("C");
+      ).toBe("X");
     });
 
     it("writes stop for a louver the unit reports no value for", () => {

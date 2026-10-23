@@ -31,7 +31,7 @@ that reply:
 
 | Adapter | A write carries | The reply supplies |
 | --- | --- | --- |
-| Classic | Every control field the unit takes, on each `set_control_info`: `pow`, `mode`, `stemp`, `shum`, `f_rate` and the direction fields. Whether the adapter takes a request without one of them is not known, so none is left out. | Each field the control leaves out. On a mode change, the values the adapter remembers for the target mode: `dt3`, `dh3`, `dfr3` and `dfd3` for cool. |
+| Classic | Every control field the unit takes, on each `set_control_info`: `pow`, `mode`, `stemp`, `shum`, `f_rate` and the direction fields. The adapter takes a write without the direction fields, and sets the louvers from one that carries them, so `setState` carries them: a swing mode or a position then goes in the same write as the rest. Whether it takes a write without one of the others is not known, so none is left out. | Each field the control leaves out. On a mode change, the values the adapter remembers for the target mode: `dt3`, `dh3`, `dfr3` and `dfd3` for cool, or `ndfd3` on a unit that reports no `dfd3`. |
 | DSIOT | The power, the power transition and the mode on each write, then only the leaves the control changes | The power the unit holds, which decides the transition. The mode, when the control sets none. The `md` of the louver and humidity leaves, which a position and a percentage are encoded from. |
 
 With `maxStateAgeForSetStateInMs` set, `setState` skips that read while the
@@ -64,6 +64,15 @@ Rejected: port 30000 alone, bound with `reuseAddr`.
 - Two calls at the same time both bound the port, and each reply reached one
   of the two sockets alone. One call resolved with every adapter and the other
   with none, and neither rejected.
+
+`discoverDevices` sends each probe to `255.255.255.255` and to the broadcast
+address of every IPv4 network the machine is on.
+
+Rejected: `255.255.255.255` alone.
+
+- The machine sends a limited broadcast out of one interface, the one its
+  default route uses, so an adapter on a second network, such as Wi-Fi beside
+  a wired one, never hears the probe.
 
 `discoverDevices` asks each adapter that replies as a classic one, over HTTP,
 whether it is an Airbase adapter: `isAirbaseAdapter` takes HTTP 404 at
@@ -117,9 +126,8 @@ and `get_model_info` fields and passing them to `parseClassicCapabilities`.
 - `parseClassicCapabilities` offers the fixed vertical positions only to a unit
   with five of them, so a unit on a DSIOT adapter taking three fixed values
   was offered none, while `parseDsiotState` reported it at `position2`.
-- The classic fields cannot carry what the trees say: `s_fdir_ud` has no bit
-  for `naturalWind` or `auto`, and the classic limits are whole degrees where a
-  DSIOT setpoint counts half degrees.
+- The classic fields cannot carry what the trees say: the classic limits are
+  whole degrees where a DSIOT setpoint counts half degrees.
 
 ## Target humidity
 

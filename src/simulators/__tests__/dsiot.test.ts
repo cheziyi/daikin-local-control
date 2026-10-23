@@ -479,7 +479,7 @@ describe("DsiotDaikinClient against the simulator", () => {
         auto: ["powerful", "econo", "streamer"],
         dehumidify: ["powerful", "econo", "streamer"],
         cool: ["powerful", "econo", "streamer"],
-        heat: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer", "heatPlus"],
         fan: ["powerful", "streamer"],
       },
       specialOutlet: false,

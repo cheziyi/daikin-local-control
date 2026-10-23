@@ -43,7 +43,7 @@ describe("parseDsiotCapabilities", () => {
         "level5",
       ],
       swingModes: ["off", "vertical", "horizontal", "both"],
-      verticalPositions: ["stop", "swing"],
+      verticalPositions: ["stop"],
       horizontalPositions: ["stop"],
       targetTemperaturesInC: {
         auto: { min: 18, max: 30, step: 0.5 },
@@ -94,18 +94,19 @@ describe("parseDsiotCapabilities", () => {
       ).toEqual([]);
     });
 
-    it("lists econo in every mode but fan", () => {
+    it("lists econo in every mode but fan, and heat plus in heat alone", () => {
       expect(
         parseDsiotCapabilities({
           ...UNIT,
           "dgc_status.e_1003.e_3002.p_44.pt": "2",
           "dgc_status.e_1002.e_3003.p_24.pt": "2",
+          "dgc_status.e_1002.e_3003.p_1C.pt": "2",
         }).specialModes,
       ).toEqual({
         auto: ["powerful", "econo"],
         dehumidify: ["powerful", "econo"],
         cool: ["powerful", "econo"],
-        heat: ["powerful", "econo"],
+        heat: ["powerful", "econo", "heatPlus"],
         fan: ["powerful"],
       });
     });
@@ -192,6 +193,25 @@ describe("parseDsiotCapabilities", () => {
       });
     });
 
+    it("reads the auto minimum from p_1D's md.mi, a signed byte, and keeps the maximum at 30 °C", () => {
+      const AUTO_SETPOINT = modeLeaf("p_1D");
+
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          [`${AUTO_SETPOINT}.md.mi`]: "28",
+          [`${AUTO_SETPOINT}.md.mx`]: "38",
+        }).targetTemperaturesInC.auto,
+      ).toEqual({ min: 20, max: 30, step: 0.5 });
+      expect(
+        parseDsiotCapabilities({
+          ...UNIT,
+          [`${AUTO_SETPOINT}.md.mi`]: "20",
+          [`${AUTO_SETPOINT}.md.mx`]: "40",
+        }).targetTemperaturesInC.auto,
+      ).toEqual({ min: 16, max: 30, step: 0.5 });
+    });
+
     it("ignores a limit that came without the other", () => {
       const { targetTemperaturesInC } = parseDsiotCapabilities({
         ...UNIT,
@@ -227,7 +247,7 @@ describe("parseDsiotCapabilities", () => {
       );
 
       expect(verticalOnly.swingModes).toEqual(["off", "vertical"]);
-      expect(verticalOnly.verticalPositions).toEqual(["stop", "swing"]);
+      expect(verticalOnly.verticalPositions).toEqual(["stop"]);
       expect(verticalOnly.horizontalPositions).toEqual([]);
     });
 
@@ -253,13 +273,13 @@ describe("parseDsiotCapabilities", () => {
   });
 
   describe("louver positions", () => {
-    it("offers each vertical position whose value md.mx allows", () => {
+    it("offers each vertical position whose value md.mx allows, and never auto, natural wind or circulating", () => {
       expect(
         parseDsiotCapabilities({
           ...UNIT,
-          [`${COOL_VERTICAL}.md.mx`]: louverMask(0, 15, 16, 19, 25),
+          [`${COOL_VERTICAL}.md.mx`]: louverMask(0, 15, 16, 19, 20, 25),
         }).verticalPositions,
-      ).toEqual(["stop", "swing", "naturalWind", "auto", "floorWarming"]);
+      ).toEqual(["stop", "swing", "floorWarming"]);
       expect(
         parseDsiotCapabilities({
           ...UNIT,
@@ -369,6 +389,31 @@ describe("parseDsiotCapabilities", () => {
         }).targetHumidities,
       ).toMatchObject({ cool: ["off", ...SETTINGS], heat: [] });
     });
+  });
+
+  describe("specialOutlet", () => {
+    it("is set when the outlet leaf holds 0", () => {
+      expect(
+        parseDsiotCapabilities({ ...UNIT, [DSIOT_PATHS.specialOutlet]: "00" })
+          .specialOutlet,
+      ).toBe(true);
+      expect(
+        parseDsiotCapabilities({ ...UNIT, [DSIOT_PATHS.specialOutlet]: "0" })
+          .specialOutlet,
+      ).toBe(true);
+    });
+
+    it.each(["01", "0A", "", undefined])(
+      "is not set when the outlet leaf holds %s",
+      (pv) => {
+        expect(
+          parseDsiotCapabilities({
+            ...UNIT,
+            ...(pv === undefined ? {} : { [DSIOT_PATHS.specialOutlet]: pv }),
+          }).specialOutlet,
+        ).toBe(false);
+      },
+    );
   });
 
   describe("energyMonitoring", () => {

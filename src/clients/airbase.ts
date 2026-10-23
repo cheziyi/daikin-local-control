@@ -2,6 +2,7 @@ import {
   mergeAirbaseCapabilityFields,
   parseAirbaseCapabilities,
   parseAirbaseZoneCount,
+  setsAirbaseZoneTemperatures,
   takesAirbaseAirside,
   takesAirbaseFanAuto,
 } from "../codecs/airbase/capabilities.js";
@@ -153,8 +154,6 @@ export class AirbaseDaikinClient implements DaikinClient {
     throw new DaikinError("An Airbase adapter takes no special mode", 501);
   }
 
-  // --- extended controls ---------------------------------------------------
-
   /** Whether fan auto is on: the unit then picks the fan speed itself, up to
    * the one that is set. `null` on a unit that takes no fan auto. */
   async getFanAuto(): Promise<boolean | null> {
@@ -205,14 +204,19 @@ export class AirbaseDaikinClient implements DaikinClient {
     );
   }
 
-  /** Opens or closes the zone at `index` in `getZones`, counted from 0. It
-   * rejects with an `Error` for an index the unit has no zone at. */
+  /** Opens or closes the zone at `index` in `getZones`, counted from 0. On a
+   * unit that sets a temperature for each zone it reads the unit's mode as
+   * well, to send that mode's temperatures back. It rejects with an `Error`
+   * for an index the unit has no zone at. */
   async setZone(index: number, enabled: boolean): Promise<void> {
     const capabilityFields = await this.readCapabilityFields();
     const current = await this.readZoneSetting(capabilityFields);
+    const controlInfo = setsAirbaseZoneTemperatures(capabilityFields)
+      ? await this.command(AIRBASE_ROUTES.getControlInfo)
+      : {};
     await this.command(
       AIRBASE_ROUTES.setZoneSetting,
-      applyAirbaseZone(current, capabilityFields, index, enabled),
+      applyAirbaseZone(current, capabilityFields, controlInfo, index, enabled),
     );
   }
 

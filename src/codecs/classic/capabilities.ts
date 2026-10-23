@@ -17,37 +17,21 @@ import {
   type VerticalPosition,
 } from "../../models/state.js";
 import {
+  CLASSIC_CAPABILITY_VERSIONS,
   CLASSIC_COOLING_ONLY_TYPE,
+  CLASSIC_DEFAULT_REGION,
+  CLASSIC_FAN_LEVELS_BY_STEPS,
+  CLASSIC_HUMIDITY_MODE_BITS,
   CLASSIC_SPECIAL_MODE_BITS,
+  CLASSIC_SWING_AXES_CODES,
 } from "./tables.js";
 
-const CAPABILITY_VERSIONS = ["0", "1", "2", "3"];
 const COOLING_ONLY_MODES: readonly OperatingMode[] = [
   "cool",
   "dehumidify",
   "fan",
 ];
 const VERTICAL_SWING_MODES: SwingMode[] = ["off", "vertical"];
-const ALL_FAN_LEVELS: FanSpeed[] = [
-  "level1",
-  "level2",
-  "level3",
-  "level4",
-  "level5",
-];
-const FAN_LEVELS_BY_STEPS: Record<string, FanSpeed[]> = {
-  "2": ["level1", "level5"],
-  "3": ["level1", "level3", "level5"],
-  "5": ALL_FAN_LEVELS,
-};
-// `s_humd` is a decimal mask with one bit for each mode that takes a humidity
-// setting.
-const HUMIDITY_MODE_BITS = {
-  auto: 0x01,
-  cool: 0x02,
-  heat: 0x04,
-  dehumidify: 0x10,
-} as const;
 // Dehumidify takes no off.
 const DEHUMIDIFY_HUMIDITY_SETTINGS = HUMIDITY_SETTINGS.filter(
   (setting) => setting !== "off",
@@ -74,8 +58,9 @@ export function mergeClassicCapabilityFields(
 
 /** Turns the field map from `mergeClassicCapabilityFields` into
  * `DaikinCapabilities`. `cpv` (capability-protocol version) is the master
- * branch. Units for Japan (`reg=jp`) follow other rules, which this package
- * does not model. */
+ * branch. A unit that reports no `reg` is read as one sold for `th`, and a
+ * `reg` is read whatever its letter case. Units for Japan (`reg=jp`) follow
+ * other rules, which this package does not model. */
 export function parseClassicCapabilities(
   fields: Record<string, string>,
 ): DaikinCapabilities {
@@ -115,25 +100,29 @@ export function parseClassicCapabilities(
   };
 }
 
-// Lists none for a unit that reports no `en_spmode`, and econo in every mode
-// but fan. The powerful and econo bits count only at `cpv=3` with a
-// `cpv_minor` other than `00`: see UNSUPPORTED.md.
+// Lists none for a unit that reports no `en_spmode`, econo in every mode but
+// fan, and heat plus in heat alone. The powerful, econo and heat plus bits
+// count only at `cpv=3` with a `cpv_minor` other than `00`: see
+// UNSUPPORTED.md.
 function specialModes(
   fields: Record<string, string>,
   cpv: string,
   offeredModes: OperatingMode[],
 ): Record<OperatingMode, SpecialMode[]> {
   const bits = Number.parseInt(fields.en_spmode ?? "", 10);
-  const followsPowerfulAndEcono =
-    cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
+  const countsBits = cpv === "3" && (fields.cpv_minor ?? "00") !== "00";
   const taken = SPECIAL_MODES.filter(
     (specialMode) =>
       (bits & CLASSIC_SPECIAL_MODE_BITS[specialMode]) !== 0 &&
-      (specialMode === "streamer" || followsPowerfulAndEcono),
+      (specialMode === "streamer" || countsBits),
   );
   const inMode = (mode: OperatingMode) =>
     offeredModes.includes(mode)
-      ? taken.filter((specialMode) => mode !== "fan" || specialMode !== "econo")
+      ? taken.filter(
+          (specialMode) =>
+            (mode !== "fan" || specialMode !== "econo") &&
+            (mode === "heat" || specialMode !== "heatPlus"),
+        )
       : [];
   return {
     auto: inMode("auto"),
@@ -148,8 +137,12 @@ function present(fields: Record<string, string>, key: string): boolean {
   return (fields[key] ?? "") !== "";
 }
 
+function region(fields: Record<string, string>): string {
+  return (fields.reg || CLASSIC_DEFAULT_REGION).toLowerCase();
+}
+
 function modes(fields: Record<string, string>, cpv: string): OperatingMode[] {
-  if (!CAPABILITY_VERSIONS.includes(cpv)) {
+  if (!CLASSIC_CAPABILITY_VERSIONS.includes(cpv)) {
     return [];
   }
   return fields.model_type === CLASSIC_COOLING_ONLY_TYPE
@@ -161,13 +154,14 @@ function fanSpeeds(
   fields: Record<string, string>,
   modern: boolean,
 ): FanSpeed[] {
-  if (!present(fields, "reg") || fields.reg === "jp") {
+  if (region(fields) === "jp") {
     return [];
   }
   // A `reg=th`, `subtype=qa` unit is controllable by the speeds it lists, not
-  // by `en_frate`.
-  const listsItsSpeeds = fields.reg === "th" && fields.subtype === "qa";
-  if (!listsItsSpeeds && fields.en_frate !== "1") {
+  // by `en_frate`, but from cpv 2 it lists none without `en_frate=1`.
+  const listsItsSpeeds =
+    region(fields) === CLASSIC_DEFAULT_REGION && fields.subtype === "qa";
+  if ((!listsItsSpeeds || modern) && fields.en_frate !== "1") {
     return [];
   }
   const speeds: FanSpeed[] = [];
@@ -181,9 +175,9 @@ function fanSpeeds(
     speeds.push("silent");
   }
   const levels =
-    "frate_steps" in fields
-      ? (FAN_LEVELS_BY_STEPS[fields.frate_steps ?? ""] ?? [])
-      : ALL_FAN_LEVELS;
+    CLASSIC_FAN_LEVELS_BY_STEPS[
+      "frate_steps" in fields ? (fields.frate_steps ?? "") : "5"
+    ] ?? [];
   return [...speeds, ...levels];
 }
 
@@ -203,10 +197,10 @@ function targetHumidities(
       ? Number.parseInt(fields.s_humd ?? "", 10)
       : 0;
   const settings = (
-    mode: keyof typeof HUMIDITY_MODE_BITS,
+    mode: keyof typeof CLASSIC_HUMIDITY_MODE_BITS,
     values: TargetHumidity[],
   ) =>
-    offeredModes.includes(mode) && mask & HUMIDITY_MODE_BITS[mode]
+    offeredModes.includes(mode) && mask & CLASSIC_HUMIDITY_MODE_BITS[mode]
       ? values
       : [];
   return {
@@ -222,7 +216,9 @@ function targetHumidities(
 // without `f_dir` swings through `f_dir_ud`/`f_dir_lr` on both axes.
 function swingModes(fields: Record<string, string>): SwingMode[] {
   if (takesClassicDirection(fields)) {
-    return fields.s_fdir === "1" ? VERTICAL_SWING_MODES : [...SWING_MODES];
+    return fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical
+      ? VERTICAL_SWING_MODES
+      : [...SWING_MODES];
   }
   return fields.en_fdir2 === "1" ? [...SWING_MODES] : [];
 }
@@ -230,15 +226,15 @@ function swingModes(fields: Record<string, string>): SwingMode[] {
 /** Whether a unit's `set_control_info` takes `f_dir`, read from the field map
  * of `mergeClassicCapabilityFields`. */
 export function takesClassicDirection(fields: Record<string, string>): boolean {
-  if (!present(fields, "reg")) {
-    return false;
-  }
   if (fields.subtype === "qa") {
-    return fields.s_fdir === "1";
+    return fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical;
   }
   const cpv = fields.cpv;
   if (cpv === "0" || cpv === "1") {
-    return fields.s_fdir === "1" || fields.s_fdir === "3";
+    return (
+      fields.s_fdir === CLASSIC_SWING_AXES_CODES.vertical ||
+      fields.s_fdir === CLASSIC_SWING_AXES_CODES.both
+    );
   }
   return (cpv === "2" || cpv === "3") && fields.en_fdir === "1";
 }

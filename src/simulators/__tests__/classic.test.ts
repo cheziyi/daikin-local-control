@@ -445,7 +445,7 @@ describe("ClassicDaikinClient against the simulator", () => {
         auto: ["powerful", "econo", "streamer"],
         dehumidify: ["powerful", "econo", "streamer"],
         cool: ["powerful", "econo", "streamer"],
-        heat: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer", "heatPlus"],
         fan: ["powerful", "streamer"],
       },
       specialOutlet: false,
@@ -575,10 +575,13 @@ describe("ClassicDaikinClient against the simulator", () => {
     const powerful = (await client.getState()).specialModes;
     await client.setSpecialMode("econo", true);
     const econo = (await client.getState()).specialModes;
-    await client.setSpecialMode("econo", false);
+    await client.setSpecialMode("heatPlus", true);
+    const heatPlus = (await client.getState()).specialModes;
+    await client.setSpecialMode("heatPlus", false);
 
     expect(powerful).toEqual(["powerful", "streamer"]);
     expect(econo).toEqual(["econo", "streamer"]);
+    expect(heatPlus).toEqual(["streamer", "heatPlus"]);
     expect((await client.getState()).specialModes).toEqual(["streamer"]);
   });
 
@@ -602,6 +605,19 @@ describe("ClassicDaikinClient against the simulator", () => {
       name: "Séjour, 1=2",
       icon: "3",
       group: { name: "Up stairs", enabled: true },
+    });
+  });
+
+  it("answers get_remote_method with the method of basic_info", async () => {
+    const simulator = await simulatorWith({ basicInfo: { method: "polling" } });
+
+    expect(
+      await clientFor(simulator).command("/common/get_remote_method"),
+    ).toEqual({
+      ret: "OK",
+      method: "polling",
+      notice_ip_int: "3600",
+      notice_sync_int: "60",
     });
   });
 
@@ -640,6 +656,33 @@ describe("ClassicDaikinClient against the simulator", () => {
       "/aircon/set_target",
       "/common/reboot",
     ]);
+  });
+
+  it("reads back the demand control, energy price and target it set", async () => {
+    const simulator = await simulatorWith();
+    const client = clientFor(simulator);
+
+    expect(await client.getDemandControl()).toEqual({
+      enabled: false,
+      maxPowerInPercent: 100,
+      mode: "manual",
+    });
+
+    await client.setDemandControl({
+      enabled: true,
+      maxPowerInPercent: 85,
+      mode: "auto",
+    });
+    await client.setEnergyPrice(1.05);
+    await client.setEnergyTarget(120);
+
+    expect(await client.getDemandControl()).toEqual({
+      enabled: true,
+      maxPowerInPercent: 85,
+      mode: "auto",
+    });
+    expect(await client.getEnergyPrice()).toBe(1.05);
+    expect(await client.getEnergyTarget()).toBe(120);
   });
 
   it("is rejected with status 403 until it registers its terminal", async () => {

@@ -15,11 +15,14 @@ import {
 import { takesClassicDirection, takesClassicHumidity } from "./capabilities.js";
 import {
   CLASSIC_FAN_SPEED_CODES,
+  CLASSIC_FLOOR_WARMING_DIRECTION,
   CLASSIC_HORIZONTAL_POSITION_CODES,
   CLASSIC_HUMIDITY_SETTING_CODES,
+  CLASSIC_LOUVER_MEMORY_DIRECTIONS,
   CLASSIC_LOUVER_STOP,
   CLASSIC_LOUVER_SWING,
   CLASSIC_NO_SETPOINT,
+  CLASSIC_OPERATING_MODE_ALIASES,
   CLASSIC_OPERATING_MODE_CODES,
   CLASSIC_SPECIAL_MODE_ADV_CODES,
   CLASSIC_SWING_MODE_CODES,
@@ -30,13 +33,13 @@ import {
 // `DaikinSensors` from `get_sensor_info`.
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
-  "0": "auto",
-  "1": "auto",
-  "7": "auto",
-  "2": "dehumidify",
-  "3": "cool",
-  "4": "heat",
-  "6": "fan",
+  ...Object.fromEntries(
+    Object.entries(CLASSIC_OPERATING_MODE_CODES).map(([mode, code]) => [
+      code,
+      mode as OperatingMode,
+    ]),
+  ),
+  ...CLASSIC_OPERATING_MODE_ALIASES,
 };
 
 const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(
@@ -114,7 +117,9 @@ export function parseClassicSensors(
  * `set_control_info` query: power and mode, the setpoint, humidity and fan
  * speed for the target mode, and the airflow fields the unit takes. When the
  * mode changes, each comes from the target mode's memory: `dt`, `dh`, `dfr`,
- * `dfd` and, for the louvers, `ndfd`. `capabilityFields`, the field map of
+ * and `dfd` or, on a unit that reports `ndfd` alone, the `f_dir` its two
+ * louver values stand for. On a 3D unit the louvers come from `ndfd`, and
+ * `f_dir` is 6 while the vertical one is at floor warming. `capabilityFields`, the field map of
  * `mergeClassicCapabilityFields`, says which fields the unit takes: `shum`
  * unless it is `subtype=qa`, `f_dir_ud` and `f_dir_lr` on a 3D unit
  * (`en_fdir2`), and `f_dir` on a unit that takes a direction. It rounds a
@@ -214,18 +219,49 @@ export function applyClassicControl(
     next.f_dir_ud = vertical;
     next.f_dir_lr = horizontal;
     if (takesDirection) {
-      next.f_dir = String(
-        (vertical === CLASSIC_LOUVER_SWING ? 1 : 0) |
-          (horizontal === CLASSIC_LOUVER_SWING ? 2 : 0),
-      );
+      next.f_dir = directionOf(vertical, horizontal);
     }
   } else if (takesDirection) {
     next.f_dir =
       control.swingMode === undefined
-        ? remembered("f_dir", "dfd")
+        ? ((modeChanged
+            ? (current[`dfd${mode}`] ??
+              decodeLouverMemory(current[`ndfd${mode}`], capabilityFields))
+            : undefined) ??
+          current.f_dir ??
+          "")
         : CLASSIC_SWING_MODE_CODES[control.swingMode];
   }
   return next;
+}
+
+// `f_dir` sets bit 1 while the vertical louver swings and bit 2 while the
+// horizontal one does, and is 6 while the vertical one is at floor warming.
+function directionOf(vertical: string, horizontal: string): string {
+  if (vertical === CLASSIC_VERTICAL_POSITION_CODES.floorWarming) {
+    return CLASSIC_FLOOR_WARMING_DIRECTION;
+  }
+  return String(
+    (vertical === CLASSIC_LOUVER_SWING ? 1 : 0) |
+      (horizontal === CLASSIC_LOUVER_SWING ? 2 : 0),
+  );
+}
+
+// The `f_dir` an `ndfd<mode>` value stands for, on a unit that reports no
+// `dfd<mode>`. On an `adp_kind=4` unit that is not `subtype=qa`, a fixed
+// position 1 to 5 counts as stop first.
+function decodeLouverMemory(
+  ndfd: string | undefined,
+  capabilityFields: Record<string, string>,
+): string | undefined {
+  if (ndfd === undefined || ndfd.length !== 2) {
+    return undefined;
+  }
+  const memory =
+    capabilityFields.adp_kind === "4" && capabilityFields.subtype !== "qa"
+      ? ndfd.replaceAll(/[1-5]/g, "0")
+      : ndfd;
+  return CLASSIC_LOUVER_MEMORY_DIRECTIONS[memory] ?? "0";
 }
 
 function parseSpecialModes(adv: string | undefined): SpecialMode[] {

@@ -3,6 +3,7 @@ import {
   mergeAirbaseCapabilityFields,
   parseAirbaseCapabilities,
   parseAirbaseZoneCount,
+  setsAirbaseZoneTemperatures,
   takesAirbaseAirside,
   takesAirbaseFanAuto,
 } from "../capabilities.js";
@@ -46,8 +47,15 @@ describe("parseAirbaseCapabilities", () => {
     expect(parseAirbaseCapabilities(UNZONED)).toEqual({
       modes: ["auto", "dehumidify", "cool", "heat", "fan"],
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
-      verticalPositions: [],
+      swingModes: [],
+      verticalPositions: [
+        "position1",
+        "position2",
+        "position3",
+        "position4",
+        "position5",
+        "swing",
+      ],
       horizontalPositions: [],
       targetTemperaturesInC: {
         auto: { min: 16, max: 28, step: 1 },
@@ -107,13 +115,20 @@ describe("parseAirbaseCapabilities", () => {
   it("offers a unit with zones no auto fan speed and no direction", () => {
     expect(parseAirbaseCapabilities(ZONED)).toMatchObject({
       fanSpeeds: ["level1", "level3", "level5"],
-      swingModes: [],
+      verticalPositions: [],
     });
     expect(
       parseAirbaseCapabilities({ ...UNZONED, en_zone: "0" }),
     ).toMatchObject({
       fanSpeeds: ["auto", "level1", "level3", "level5"],
-      swingModes: ["off", "vertical", "horizontal", "both"],
+      verticalPositions: [
+        "position1",
+        "position2",
+        "position3",
+        "position4",
+        "position5",
+        "swing",
+      ],
     });
   });
 
@@ -154,7 +169,7 @@ describe("parseAirbaseCapabilities", () => {
 
   it("offers no direction unless en_fdir is 1", () => {
     expect(
-      parseAirbaseCapabilities({ ...UNZONED, en_fdir: "0" }).swingModes,
+      parseAirbaseCapabilities({ ...UNZONED, en_fdir: "0" }).verticalPositions,
     ).toEqual([]);
   });
 
@@ -201,6 +216,14 @@ describe("takesAirbaseAirside", () => {
     expect(takesAirbaseAirside({ ...UNZONED, en_airside: "1" })).toBe(false);
     expect(takesAirbaseAirside({ ...ZONED, en_airside: "0" })).toBe(false);
     expect(takesAirbaseAirside({ ...ZONED, en_frate: "0" })).toBe(false);
+  });
+});
+
+describe("setsAirbaseZoneTemperatures", () => {
+  it("passes a unit that reports en_linear_zone=1, and no other", () => {
+    expect(setsAirbaseZoneTemperatures({ en_linear_zone: "1" })).toBe(true);
+    expect(setsAirbaseZoneTemperatures({ en_linear_zone: "0" })).toBe(false);
+    expect(setsAirbaseZoneTemperatures(ZONED)).toBe(false);
   });
 });
 

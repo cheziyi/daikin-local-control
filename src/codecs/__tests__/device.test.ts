@@ -6,11 +6,17 @@ describe("isAirConditioner", () => {
     expect(isAirConditioner({ type: "aircon" })).toBe(true);
   });
 
-  it("passes a DSIOT adapter unless its cdev is an air cleaner's", () => {
+  it("passes a DSIOT adapter with no cdev, or an air conditioner's", () => {
     expect(isAirConditioner({ type: "GPF" })).toBe(true);
     expect(isAirConditioner({ type: "GPF", cdev: "RA" })).toBe(true);
+    expect(isAirConditioner({ type: "GPF", cdev: "NA" })).toBe(true);
+  });
+
+  it("passes no DSIOT adapter with another cdev, such as an air cleaner's", () => {
     expect(isAirConditioner({ type: "GPF", cdev: "1D" })).toBe(false);
     expect(isAirConditioner({ type: "GPF", cdev: "CJ" })).toBe(false);
+    expect(isAirConditioner({ type: "GPF", cdev: "XX" })).toBe(false);
+    expect(isAirConditioner({ type: "GPF", cdev: "" })).toBe(false);
   });
 
   it("passes no other type, and no reply without one", () => {

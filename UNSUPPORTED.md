@@ -7,44 +7,40 @@ To add one, pin down the request and reply first, then delete its row.
 
 | Feature | What is unknown | Reach it with |
 | --- | --- | --- |
-| DSIOT special air outlet | Which leaf reports it. `getCapabilities` reports `specialOutlet: false`. | `DsiotDaikinClient.multireqGet()` |
 | Classic `/common/set_location` | The parameter name. | `ClassicDaikinClient.command()` |
 | DSIOT `/config/*` endpoints: time zone, date and time, network settings, Wi-Fi scan, firmware update | The request bodies. | Not reachable |
 | DSIOT fixed horizontal louver positions | Which position each value 1-14 stands for. `getState` reports `stop` for any of them, and a control that sets `stop` keeps the position. | `DsiotDaikinClient.multireqUpdate()` |
 | DSIOT dehumidify setpoint write | Whether `p_1E` accepts a write; it is treated as read-only, so `setState` drops a `targetTemperatureInC` in dehumidify. | `DsiotDaikinClient.multireqUpdate()` |
-| Classic `shum_asean`, the humidity setting of a `subtype=qa` unit | What each value stands for. `setState` sends such a unit no humidity setting, and `getCapabilities` lists none. | `ClassicDaikinClient.command()` |
-| Classic vertical louver value `f_dir_ud=C` | What it stands for. `getState` reports `null`. | `ClassicDaikinClient.command()` |
+| A DSIOT write on a unit in mode `0900` or `0A00`, which run on cool's and heat's leaves | Whether the adapter takes the value back, or the `0200` or `0100` whose leaves it runs on. `setState` sends it back as reported, with the leaves of cool or heat. | `DsiotDaikinClient.multireqUpdate()` |
+| The vertical louver at `auto`, `naturalWind` or `circulating` as a write: classic `f_dir_ud` A, N and C, DSIOT louver values 16, 19 and 20 | Whether a unit takes a write of them. `getState` reads each, `getCapabilities` lists none, and `setState` sends one it is given, on a DSIOT adapter where the mode's `md.mx` allows it. | `DaikinClient.setState()` |
 | Classic schedule demand mode (`mode=1`) | The full format of the weekly table it needs (`moc`..`suc`, `<day><n>_en`/`_t`/`_p`). | `ClassicDaikinClient.command()` |
-| Heat plus: classic `spmode_kind=4`, DSIOT `dgc_status.e_1002.e_3003.p_1C` | Which units take it. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqUpdate()` |
 | Timers, weekly programs, schedule timers (`/aircon/get_timer`, `set_timer`, `get_program`, `set_program`, `get_scdltimer_info`, `get_scdltimer_body`, `set_scdltimer_info`, `set_scdltimer_body`) | Their parameters. | `ClassicDaikinClient.command()` |
-| Classic setting reads: `/aircon/get_demand_control`, `/aircon/get_price`, `/aircon/get_target`, `/common/get_holiday` | The reply fields. `getHolidayMode` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
-| Classic `method` in `/common/get_remote_method` | Whether the reply carries it. `getOutOfHomeAccess` reads `/common/basic_info` instead. | `ClassicDaikinClient.command()` |
-| Energy history: classic `/aircon/get_week_power`, `get_year_power`, `get_day_power_ex`, `get_week_power_ex`, `get_year_power_ex`, and DSIOT `adr_0100.history` | The unit of each value, and which day or month each position in a list stands for. | `ClassicDaikinClient.command()` |
+| Energy history: classic `/aircon/get_week_power`, `get_year_power`, `get_day_power_ex`, `get_week_power_ex`, `get_year_power_ex`, and DSIOT `adr_0100.i_power.week_power`, `year_power`, `month_power_ex` and `year_power_ex` | The unit of each value, and which day or month each position in a list stands for. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
 | Power draw: classic `mompow` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_A005.p_01` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
 | Compressor frequency: classic `cmpfreq` in `/aircon/get_sensor_info`, DSIOT `dgc_status.e_1003.e_2006.p_04` | The unit. | `ClassicDaikinClient.command()`, `DsiotDaikinClient.multireqGet()` |
-| Error code: classic `err` in `/aircon/get_sensor_info` and `/common/basic_info` | Which code on the unit's display each number stands for. | `ClassicDaikinClient.command()` |
+| Error code: classic `err` in `/aircon/get_sensor_info` and `/common/basic_info`, where 251 to 259 is a fault on the serial line to the unit | Which code on the unit's display each other number stands for. | `ClassicDaikinClient.command()` |
 | Reading the settings of a DSIOT adapter: LED, holiday mode, icon, group | The value encoding of each `adp_d` leaf. | `DsiotDaikinClient.multireqGet()` |
 | Classic `powerful` and `econo` on a unit whose `cpv` is not 3, or whose `cpv_minor` is `00` or missing | Whether such a unit takes them. `getCapabilities` lists neither for it, whatever its `en_spmode`. | `ClassicDaikinClient.setSpecialMode()` |
 | `econo` in fan mode | Whether a unit takes it. `getCapabilities` lists it in every mode but fan. | `DaikinClient.setSpecialMode()` |
 | A special mode switched on while another is on | Whether the adapter switches the other off. `setSpecialMode` writes the one mode it is given. | `DaikinClient.setSpecialMode()` |
-| Classic notifications, clock and account: `/common/get_notify`, `set_notify`, `set_push_notice`, `set_timezone`, `notify_date_time`, `set_account` | Their parameters. | `ClassicDaikinClient.command()` |
-| Classic network: `/common/get_network_setting`, `set_network_setting`, `start_wifi_scan`, `get_wifi_scan_result`, `start_wifi_connection`, `permit_wifi_connection`, `set_lpw` | Their parameters. | `ClassicDaikinClient.command()` |
+| Classic notifications, clock and account: `/common/get_notify`, `set_notify`, `set_push_notice`, `set_timezone`, `notify_date_time`, `set_account` | The parameters of the first three, and the replies of the rest: `set_timezone` takes `dst` and `zone`, `notify_date_time` takes `date` as `yyyy/MM/dd`, `time` and `zone` in UTC, and `set_account` takes `id`, `pw` and `port`. | `ClassicDaikinClient.command()` |
+| Classic network: `/common/get_network_setting`, `set_network_setting`, `start_wifi_scan`, `get_wifi_scan_result`, `start_wifi_connection`, `permit_wifi_connection`, `set_lpw`, `set_regioncode` | The parameters of the first six, and the replies of the rest: `set_lpw` takes `lpw`, the current code, and `new_lpw`, and `set_regioncode` takes `reg`. | `ClassicDaikinClient.command()` |
 | Classic firmware update: a POST to `/dkac/system/fwupdate` | The format of the upload. | Not reachable |
 | A terminal uuid in another form: with dashes, uppercase, or not 32 hexadecimal digits | Whether the adapter accepts it. `createDaikinClient` throws an `Error` for one. | Not reachable |
 | Telling an Airbase adapter from a classic one in a discovery reply | Whether any field of the reply differs: both report `type=aircon`. `discoverDevices` asks the adapter over HTTP instead, and takes HTTP 404 at `/common/basic_info` with `ret=OK` at `/skyfi/common/basic_info` for an Airbase adapter. What a classic adapter answers under `/skyfi` is not known, so it is never asked there. | Set `protocol` on the `DaikinDevice` by hand |
 | An Airbase child lock: `lpw_flag` in its `/common/basic_info` | Whether an Airbase adapter has a child lock code, and how a request would carry one. `discoverDevices` reports `requiresLocalPassword: false` for an Airbase adapter whatever its `lpw_flag`, and `AirbaseDaikinClient` sends no `lpw`. | `AirbaseDaikinClient.command()` |
 | Airbase special modes | Whether a unit takes any, and the request. `getState` reports none, and `AirbaseDaikinClient.setSpecialMode` rejects with status 501. | `AirbaseDaikinClient.command()` |
-| Airbase humidity: `shum`, and `dh1` to `dhh` in `/aircon/get_control_info` | Whether a ducted unit has a humidity setting, and what each field holds. `getState` reports `null`, and `setState` sends `shum` back as the unit holds it and none of the `dh` fields. | `AirbaseDaikinClient.command()` |
-| Airbase energy monitoring and demand control | Which field says a unit has either. `getCapabilities` reports `false` for both. | `AirbaseDaikinClient.command()` |
-| Airbase `f_dir` values 4 and 7 | What each stands for. `getState` reports `swingMode: "off"`. | `AirbaseDaikinClient.command()` |
-| Airbase `bk_auto` and `operate` in `/aircon/get_control_info`, on a unit that reports a `bk_auto` other than its mode while it runs in cool or heat | Which of the two modes such a unit remembers a fan speed for. `setState` writes it to the one `bk_auto` names. | `AirbaseDaikinClient.command()` |
-| Airbase `/aircon/set_control_info` without the memory fields: `dt0` to `dt7`, `dfr1`, `dfr2`, `dfd1`, `dfd2`, `auto1`, `auto2`, `airside1` and `airside2` | Whether the adapter takes it, so `setState` sends each one a control changes. | `AirbaseDaikinClient.command()` |
+| Airbase humidity: `shum` in `/aircon/get_control_info`, with `dh1` to `dh4` and `dhh` beside it, in the classic encoding | Whether a ducted unit has a humidity setting, and which mode's setting each `dh` field holds. `getState` reports `null`, and `setState` sends `shum` back as the unit holds it and none of the `dh` fields. | `AirbaseDaikinClient.command()` |
+| Airbase energy monitoring and demand control | Which field says a unit has energy monitoring, and whether `en_demand` in `/aircon/get_control_info` says a unit has demand control or that it is on. `getCapabilities` reports `false` for both. | `AirbaseDaikinClient.command()` |
+| Airbase `f_dir` value 5, and 6 as a write | What 5 stands for, and whether a unit takes 6, which it reports while its louver is off: a unit takes 0 to 4 and 7. `getState` reports `verticalPosition: null` for 5 and `stop` for 6, and `setState` drops a `stop`. | `AirbaseDaikinClient.command()` |
+| Airbase `operate` in `/aircon/get_control_info`, on a unit in auto, fan or dehumidify | Whether it names the mode such a unit runs on, in which encoding. `setState` runs those modes on the one `bk_auto` names. | `AirbaseDaikinClient.command()` |
+| Airbase `/aircon/set_control_info` without `dt0` to `dt7` | Whether the adapter takes it, so `setState` sends the target mode's. It takes a write without `dfr1`, `dfr2`, `dfd1`, `dfd2`, `auto1`, `auto2`, `airside1` and `airside2`, which `setState` sends only for a control that changes them. | `AirbaseDaikinClient.command()` |
 | Every other Airbase endpoint: timers, programs, schedules, holiday, demand control, energy history, network and firmware | Their parameters and reply fields. | `AirbaseDaikinClient.command()` |
 | A classic adapter sold in Europe: the capability fields of a unit there (`reg=eu`) | Whether such a unit reports them as a unit in the other markets does. `getCapabilities` reads them by the same rules. | `ClassicDaikinClient.command()` |
-| A classic adapter sold in Europe that reports `adp_kind=3` and `en_secure=1` | Whether it speaks HTTPS, as such an adapter does in the other markets. `discoverDevices` sets `usesHttps` for it. | Set `usesHttps: false` on the `DaikinDevice` |
+| A classic adapter sold in Europe that reports `en_secure=1` or `lpw_flag=1` | Whether it requires registration, HTTPS or a child lock code, as such an adapter does in the other markets: an adapter there is controlled over plain HTTP with no terminal uuid, registration or `lpw`. `discoverDevices` sets the flags for it as elsewhere. | Set `requiresRegistration`, `usesHttps` and `requiresLocalPassword` to `false` on the `DaikinDevice` |
 | A DSIOT adapter sold in Europe (BRP069C series) | Whether its `dgc_status` leaves hold the values a BRP084 holds. Its `adp_i`, `adp_d` and `dgc_status` resources are read with the same request. | `DsiotDaikinClient.multireqGet()` |
 | A DSIOT adapter that answers `/dsiot/multireq` only once it is switched on, by the UDP datagram `DAIKIN_UDP/debug/en_multireq 1` sent to its port 30050 | Which adapters need it, what one answers to the datagram and to `/dsiot/multireq` before it, and how long it stays on. | Not reachable |
-| An adapter whose discovery reply has a `type` other than `aircon` and `GPF`, such as `common_adp`, or none | Whether any is an air conditioner's. `discoverDevices` leaves it out. | Write the `DaikinDevice` by hand |
+| An adapter whose discovery reply has a `type` other than `aircon` and `GPF`, such as `common_adp`, or none, or `type=GPF` with a `cdev` other than `RA` and `NA` | Whether any is an air conditioner's. `discoverDevices` leaves it out. | Write the `DaikinDevice` by hand |
 
 ## Not modelled
 
@@ -53,11 +49,12 @@ These values are known, but the package's types don't represent them yet:
 | Value | What `getState` reports instead |
 | --- | --- |
 | Humidify mode (classic `HUM`, DSIOT `0800`) and laundry mode (classic `LND`) | `mode: "auto"`. `setState` keeps the mode unless the control sets one, and on a DSIOT adapter writes power alone while it is kept. |
-| DSIOT vertical louver values other than stop, the first five fixed positions, swing, auto, natural wind and floor warming | `verticalPosition: null` |
+| DSIOT vertical louver values other than stop, the first five fixed positions, swing, auto, natural wind, floor warming and circulating airflow | `verticalPosition: null` |
 | DSIOT laundry mode (`dgc_status.e_1002.e_3003.p_25` = `01`) | The mode in `dgc_status.e_1002.e_3001.p_01` |
-| Classic `f_dir=6` (heat with the special air outlet) | `swingMode: "off"` |
+| Classic `f_dir=6`, the vertical louver at floor warming, on a unit without `f_dir_ud` | `swingMode: "off"` and `verticalPosition: null`. A 3D unit reports `floorWarming` from `f_dir_ud`, and `setState` writes `f_dir=6` with it |
+| Classic `shum_asean`, the humidity setting of a `subtype=qa` unit: 0 for off and 1 to 3 for a level, taken in cool, with `s_humd_asean` bits 1, 2, 4 and 8 for the values a unit takes | `targetHumidity: null`. `setState` sends such a unit no humidity setting, and `getCapabilities` lists none |
 | Japanese units (`reg=jp`), which follow separate rules for limits, humidity and fan, and take a humidity percentage | The rules for other regions |
-| Airbase zone temperatures: `lztemp_c` and `lztemp_h` in `/aircon/get_zone_setting`, a setpoint for each zone in cool and in heat | Nothing: `getZones` leaves them out, and `setZone` sends them back as the unit holds them |
+| Airbase zone temperatures: `lztemp_c` and `lztemp_h` in `/aircon/get_zone_setting`, a setpoint for each zone in cool and in heat on a unit with `en_linear_zone=1` | Nothing: `getZones` leaves them out, and `setZone` sends the running mode's back as the unit holds them |
 | Airbase fan auto and airside | `fanSpeed` holds `f_rate` alone. `AirbaseDaikinClient.getFanAuto` and `getAirside` report the other two |
 | Airbase modes outside `OperatingMode`, such as `HUM` | `mode: "auto"`. `setState` keeps the mode unless the control sets one |
 
@@ -96,8 +93,7 @@ These answers are a simulator's own choice, where an adapter's is not known:
 | Answers `rsc` 4001, with HTTP 200, to a DSIOT request without the right `Authorization` | Whether an adapter answers that or HTTP 401. |
 | Answers `ret=PARAM NG` to a classic write without a parameter, or with a `spmode_kind` other than 1, 2 and 4. `/aircon/set_control_info` needs `pow`, `mode`, `stemp`, `f_rate` and, on a unit that reports it, `shum` | Which requests an adapter answers `PARAM NG`, and whether it takes a `set_control_info` without one of them. |
 | Holds any value it is sent or set to, and a special mode the unit does not report taking | What an adapter answers to a value the unit does not take. |
-| Drops a `/aircon/set_control_info` parameter that is not a control field or the `dt`, `dh` or `dfd` of a mode | Which other parameters an adapter takes. |
-| Answers `/common/get_remote_method` with `notice_ip_int` and `notice_sync_int` alone | Whether the reply carries `method`. |
+| Drops a `/aircon/set_control_info` parameter that is not a control field or the `dt`, `dh`, `dfd` or `ndfd` of a mode | Which other parameters an adapter takes. |
 | Answers every reply's fields in one order, with no field beyond those it holds | The order of an adapter's fields, and the fields no caller of this package reads. |
 | Keeps answering after `/common/reboot` and `/config/system/reboot` | How long an adapter stays away. |
 | Answers `rsc` 2000 to a DSIOT read and 2004 to a write, without `fr`, and without `pc` on a write | Which `rsc` from 2000 to 2004 an adapter answers each with, and what else the reply carries. |

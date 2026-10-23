@@ -2,8 +2,10 @@ import {
   CLASSIC_ADAPTER_TYPE,
   CLASSIC_COOLING_ONLY_TYPE,
   CLASSIC_FAN_SPEED_CODES,
+  CLASSIC_HEAT_PUMP_TYPE,
   CLASSIC_HORIZONTAL_POSITION_CODES,
   CLASSIC_HUMIDITY_SETTING_CODES,
+  CLASSIC_LOCAL_PASSWORD_PARAMETER,
   CLASSIC_LOUVER_STOP,
   CLASSIC_LOUVER_SWING,
   CLASSIC_NO_SETPOINT,
@@ -12,12 +14,18 @@ import {
   CLASSIC_SPECIAL_MODE_ADV_CODES,
   CLASSIC_SPECIAL_MODE_BITS,
   CLASSIC_SPECIAL_MODE_KIND_CODES,
+  CLASSIC_SWING_AXES_CODES,
   CLASSIC_SWING_MODE_CODES,
   CLASSIC_TERMINAL_SCOPE_CODES,
   CLASSIC_VERTICAL_POSITION_CODES,
 } from "../codecs/classic/tables.js";
+import { DAIKIN_TERMINAL_UUID_HEADER } from "../codecs/tables.js";
 import type { DaikinDeviceInfo } from "../models/device.js";
-import type { DaikinSensors, DaikinState } from "../models/state.js";
+import type {
+  DaikinSensors,
+  DaikinState,
+  SpecialMode,
+} from "../models/state.js";
 import {
   type DaikinSimulator,
   type DaikinSimulatorRequest,
@@ -60,7 +68,7 @@ const DEFAULT_MODEL_INFO: Record<string, string> = {
   en_fdir: "1",
   s_fdir: "3",
   s_humd: "0",
-  en_spmode: "7",
+  en_spmode: "15",
   elec: "1",
   dmnd: "1",
   en_scdltmr: "1",
@@ -105,15 +113,29 @@ const DEFAULT_REMOTE_METHOD: Record<string, string> = {
   notice_sync_int: "60",
 };
 
+const DEFAULT_DEMAND_CONTROL: Record<string, string> = {
+  demand_type: "1",
+  en_demand: "0",
+  mode: "0",
+  max_pow: "100",
+};
+
+const DEFAULT_PRICE: Record<string, string> = {
+  price_int: "0",
+  price_dec: "00",
+};
+
+const DEFAULT_TARGET: Record<string, string> = { target: "0" };
+
 const REGISTER_TERMINAL_PATH = "/common/register_terminal";
 
 // A `set_control_info` without one of these is answered `PARAM NG`. `shum`
 // joins them on a unit whose `get_control_info` reports it.
 const REQUIRED_CONTROL_PARAMETERS = ["pow", "mode", "stemp", "f_rate"];
 // The parameters `set_control_info` stores: the control fields, and the
-// memory of a mode by name, such as `dt3` and `dfd4`.
+// memory of a mode by name, such as `dt3`, `dfd4` and `ndfd4`.
 const CONTROL_PARAMETER_PATTERN =
-  /^(pow|mode|stemp|shum|f_rate|f_dir|f_dir_ud|f_dir_lr|(dt|dh|dfd)\w)$/;
+  /^(pow|mode|stemp|shum|f_rate|f_dir|f_dir_ud|f_dir_lr|(dt|dh|dfd|ndfd)\w)$/;
 // The control field each memory prefix remembers: `dt3` holds the `stemp` of
 // mode 3.
 const MODE_MEMORY_FIELDS = {
@@ -123,25 +145,18 @@ const MODE_MEMORY_FIELDS = {
   dfd: "f_dir",
 } as const;
 
-// `spmode_kind` 4 is heat plus, which `adv` reports as 4. It is outside
-// `SpecialMode`: see UNSUPPORTED.md.
-const HEAT_PLUS_KIND_CODE = "4";
-const HEAT_PLUS_ADV_CODE = "4";
-// Powerful, econo and heat plus replace one another in `adv`.
-const ADV_CODES_BY_SPECIAL_MODE_KIND: Record<string, string> = {
-  [CLASSIC_SPECIAL_MODE_KIND_CODES.powerful]:
-    CLASSIC_SPECIAL_MODE_ADV_CODES.powerful,
-  [CLASSIC_SPECIAL_MODE_KIND_CODES.econo]: CLASSIC_SPECIAL_MODE_ADV_CODES.econo,
-  [HEAT_PLUS_KIND_CODE]: HEAT_PLUS_ADV_CODE,
-};
+// The modes `set_special_mode` takes as a `spmode_kind` replace one another
+// in `adv`.
+const ADV_CODES_BY_SPECIAL_MODE_KIND: Record<string, string> =
+  Object.fromEntries(
+    Object.entries(CLASSIC_SPECIAL_MODE_KIND_CODES).map(([mode, kind]) => [
+      kind,
+      CLASSIC_SPECIAL_MODE_ADV_CODES[mode as SpecialMode],
+    ]),
+  );
 
 // A sensor field the unit has no reading for.
 const NO_READING = "-";
-
-// `type` in `get_model_info` on a heat pump.
-const HEAT_PUMP_TYPE = "N";
-// `s_fdir`: the axes the louvers swing on.
-const SWING_AXES_CODES = { none: "0", vertical: "1", both: "3" } as const;
 
 /** What a simulated classic unit has. */
 export interface ClassicSimulatorUnit extends DaikinSimulatorUnit {
@@ -152,7 +167,7 @@ export interface ClassicSimulatorUnit extends DaikinSimulatorUnit {
 
 export interface StartClassicSimulatorOptions extends StartSimulatorOptions {
   /** What the unit has. Defaults to a heat pump with every fan speed, swing
-   * on both axes and all three special modes. A field of `modelInfo`
+   * on both axes and all four special modes. A field of `modelInfo`
    * replaces what this sets. */
   unit?: ClassicSimulatorUnit;
   /** Fields added to the `/common/basic_info` reply, each replacing a default
@@ -194,6 +209,12 @@ export interface ClassicDaikinSimulator extends DaikinSimulator {
   readonly sensorInfo: Record<string, string>;
   /** What `/common/get_remote_method` answers. */
   readonly remoteMethod: Record<string, string>;
+  /** What `/aircon/get_demand_control` answers. */
+  readonly demandControl: Record<string, string>;
+  /** What `/aircon/get_price` answers. */
+  readonly price: Record<string, string>;
+  /** What `/aircon/get_target` answers. */
+  readonly target: Record<string, string>;
   /** The terminal uuids `/common/register_terminal` has registered. Only an
    * adapter started with a `key` checks them. */
   readonly registeredTerminalUuids: Set<string>;
@@ -221,6 +242,9 @@ export async function startClassicSimulator(
   const controlInfo = { ...DEFAULT_CONTROL_INFO, ...options.controlInfo };
   const sensorInfo = { ...DEFAULT_SENSOR_INFO, ...options.sensorInfo };
   const remoteMethod = { ...DEFAULT_REMOTE_METHOD };
+  const demandControl = { ...DEFAULT_DEMAND_CONTROL };
+  const price = { ...DEFAULT_PRICE };
+  const target = { ...DEFAULT_TARGET };
   const registeredTerminalUuids = new Set<string>();
 
   const setState = (state: Partial<DaikinState>) =>
@@ -233,12 +257,19 @@ export async function startClassicSimulator(
   setState(options.state ?? {});
   setSensors(options.sensors ?? {});
 
-  const reads: Record<string, Record<string, string>> = {
-    "/common/basic_info": basicInfo,
-    "/common/get_remote_method": remoteMethod,
-    "/aircon/get_model_info": modelInfo,
-    "/aircon/get_control_info": controlInfo,
-    "/aircon/get_sensor_info": sensorInfo,
+  const reads: Record<string, () => Record<string, string>> = {
+    "/common/basic_info": () => basicInfo,
+    // The reply carries the `method` of `basic_info` as well.
+    "/common/get_remote_method": () => ({
+      method: basicInfo.method ?? "",
+      ...remoteMethod,
+    }),
+    "/aircon/get_model_info": () => modelInfo,
+    "/aircon/get_control_info": () => controlInfo,
+    "/aircon/get_sensor_info": () => sensorInfo,
+    "/aircon/get_demand_control": () => demandControl,
+    "/aircon/get_price": () => price,
+    "/aircon/get_target": () => target,
   };
 
   // Each write returns false for a request that lacks a parameter.
@@ -286,9 +317,11 @@ export async function startClassicSimulator(
       return true;
     },
     "/aircon/set_demand_control": (query) =>
-      hasEvery(query, ["demand_type", "en_demand", "mode", "max_pow"]),
-    "/aircon/set_price": (query) => hasEvery(query, ["price_int", "price_dec"]),
-    "/aircon/set_target": (query) => hasEvery(query, ["target"]),
+      copy(query, demandControl, Object.keys(DEFAULT_DEMAND_CONTROL)),
+    "/aircon/set_price": (query) =>
+      copy(query, price, Object.keys(DEFAULT_PRICE)),
+    "/aircon/set_target": (query) =>
+      copy(query, target, Object.keys(DEFAULT_TARGET)),
     "/common/set_led": (query) => copy(query, basicInfo, ["led"]),
     "/common/set_holiday": (query) => copy(query, basicInfo, ["en_hol"]),
     "/common/set_icon": (query) => copy(query, basicInfo, ["icon"]),
@@ -343,12 +376,12 @@ export async function startClassicSimulator(
   };
 
   const answer = (request: DaikinSimulatorRequest): SimulatorReply => {
-    const fields = reads[request.path];
+    const read = reads[request.path];
     const write = writes[request.path];
     const registers = request.path === REGISTER_TERMINAL_PATH;
     if (
       request.method !== "GET" ||
-      (fields === undefined && write === undefined && !registers)
+      (read === undefined && write === undefined && !registers)
     ) {
       return unanswered(request);
     }
@@ -372,13 +405,13 @@ export async function startClassicSimulator(
     }
     if (
       options.localPassword !== undefined &&
-      request.query.lpw !== options.localPassword
+      request.query[CLASSIC_LOCAL_PASSWORD_PARAMETER] !== options.localPassword
     ) {
       return reply("LPW NG");
     }
 
-    if (fields !== undefined) {
-      return reply("OK", fields);
+    if (read !== undefined) {
+      return reply("OK", read());
     }
     return reply(write?.(request.query, terminalUuid) ? "OK" : "PARAM NG");
   };
@@ -393,6 +426,9 @@ export async function startClassicSimulator(
     controlInfo,
     sensorInfo,
     remoteMethod,
+    demandControl,
+    price,
+    target,
     registeredTerminalUuids,
     setState,
     setSensors,
@@ -404,7 +440,9 @@ export async function startClassicSimulator(
 function encodeUnit(unit: ClassicSimulatorUnit): Record<string, string> {
   const fields: Record<string, string> = {};
   if (unit.coolingOnly !== undefined) {
-    fields.type = unit.coolingOnly ? CLASSIC_COOLING_ONLY_TYPE : HEAT_PUMP_TYPE;
+    fields.type = unit.coolingOnly
+      ? CLASSIC_COOLING_ONLY_TYPE
+      : CLASSIC_HEAT_PUMP_TYPE;
   }
   if (unit.fan !== undefined) {
     fields.en_frate = flag(unit.fan);
@@ -414,7 +452,7 @@ function encodeUnit(unit: ClassicSimulatorUnit): Record<string, string> {
   }
   if (unit.swing !== undefined) {
     fields.en_fdir = flag(unit.swing !== "none");
-    fields.s_fdir = SWING_AXES_CODES[unit.swing];
+    fields.s_fdir = CLASSIC_SWING_AXES_CODES[unit.swing];
   }
   if (unit.specialModes !== undefined) {
     fields.en_spmode = String(
@@ -586,7 +624,8 @@ function reply(ret: string, fields?: Record<string, string>): SimulatorReply {
 }
 
 function terminalUuidOf(request: DaikinSimulatorRequest): string | undefined {
-  const header = request.headers["x-daikin-uuid"];
+  // Node lowercases the names of the headers it receives.
+  const header = request.headers[DAIKIN_TERMINAL_UUID_HEADER.toLowerCase()];
   return typeof header === "string" ? header : undefined;
 }
 

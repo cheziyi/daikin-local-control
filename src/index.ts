@@ -19,6 +19,7 @@ export * from "./codecs/dsiot/device.js";
 export * from "./codecs/dsiot/multireq.js";
 export * from "./codecs/dsiot/state.js";
 export * from "./codecs/dsiot/tables.js";
+export * from "./codecs/tables.js";
 export * from "./discovery.js";
 export * from "./error.js";
 export * from "./factory.js";

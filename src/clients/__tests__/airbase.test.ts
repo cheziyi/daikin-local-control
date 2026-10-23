@@ -255,6 +255,29 @@ describe("AirbaseDaikinClient", () => {
       ]);
     });
 
+    it("reads the mode of a unit that sets a zone temperature, and sends that mode's back", async () => {
+      const transport = adapter({
+        ...UNIT,
+        [GET_MODEL_INFO]: `${UNIT[GET_MODEL_INFO]},en_linear_zone=1`,
+        [GET_ZONE_SETTING]: `${UNIT[GET_ZONE_SETTING]},lztemp_c=24%3b25%3b0,lztemp_h=20%3b21%3b0`,
+      });
+
+      await airbaseClient(transport).setZone(1, true);
+
+      expect(pathsSentTo(transport).slice(-3)).toEqual([
+        GET_ZONE_SETTING,
+        GET_CONTROL_INFO,
+        SET_ZONE_SETTING,
+      ]);
+      expect(queriesSentTo(transport, SET_ZONE_SETTING)).toEqual([
+        {
+          zone_name: "Living;Bedrooms;Zone3",
+          zone_onoff: "1;1;0",
+          lztemp_c: "24;25;0",
+        },
+      ]);
+    });
+
     it("rejects with an Error for a zone the unit lacks, and writes nothing", async () => {
       const transport = adapter(UNIT);
 

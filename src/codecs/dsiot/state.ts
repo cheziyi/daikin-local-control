@@ -31,8 +31,10 @@ import {
   DSIOT_MODE_PATHS,
   DSIOT_OFF,
   DSIOT_ON,
+  DSIOT_OPERATING_MODE_ALIASES,
   DSIOT_OPERATING_MODE_CODES,
   DSIOT_PATHS,
+  DSIOT_POWER_TRANSITION_CODES,
   DSIOT_SPECIAL_MODE_PATHS,
   DSIOT_VERTICAL_POSITION_VALUES,
   type DsiotHumidity,
@@ -56,7 +58,6 @@ export function buildDsiotSpecialModeUpdate(
   );
 }
 
-// --- value encodings -------------------------------------------------------
 // Leaf values are hex strings. Multi-byte values are little-endian, and
 // temperatures count half degrees.
 
@@ -124,13 +125,13 @@ function nullIfNaN(value: number): number | null {
 }
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> = {
-  "0000": "fan",
-  "0100": "heat",
-  "0200": "cool",
-  "0300": "auto",
-  "0500": "dehumidify",
-  "0900": "cool",
-  "0A00": "heat",
+  ...Object.fromEntries(
+    Object.entries(DSIOT_OPERATING_MODE_CODES).map(([mode, code]) => [
+      code,
+      mode as OperatingMode,
+    ]),
+  ),
+  ...DSIOT_OPERATING_MODE_ALIASES,
 };
 
 export function encodeDsiotMode(mode: OperatingMode): string {
@@ -342,17 +343,11 @@ function isHumidityOn(
     : targetHumidity !== "off";
 }
 
-const POWER_TRANSITIONS = {
-  turningOn: "00",
-  turningOff: "01",
-  unchanged: "02",
-} as const;
-
 /** Turns the flattened indoor `dgc_status` tree, read with `md`, into a
  * `DaikinState`. Every value is per mode: the setpoint, humidity, fan speed and
  * louvers each have a leaf for each mode, and the state reads the current
  * mode's. Powerful is read from the outdoor tree, and reads as off without
- * it. */
+ * it. Heat plus reads as on in heat alone. */
 export function parseDsiotState(values: Record<string, string>): DaikinState {
   const mode = decodeDsiotMode(values[DSIOT_PATHS.mode]) ?? "auto";
   const paths = DSIOT_MODE_PATHS[mode];
@@ -368,7 +363,9 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
     verticalPosition: parseVerticalPosition(values, paths.vertical),
     horizontalPosition: parseHorizontalPosition(values[paths.horizontal]),
     specialModes: SPECIAL_MODES.filter(
-      (mode) => values[DSIOT_SPECIAL_MODE_PATHS[mode]] === DSIOT_ON,
+      (specialMode) =>
+        values[DSIOT_SPECIAL_MODE_PATHS[specialMode]] === DSIOT_ON &&
+        (specialMode !== "heatPlus" || mode === "heat"),
     ),
   };
 }
@@ -381,7 +378,10 @@ export function parseDsiotState(values: Record<string, string>): DaikinState {
  * leaves for, and a louver position the unit does not take. It always writes
  * the `auto` fan speed in dehumidify, and in cool while a humidity setting is
  * on. A unit in a mode outside `OperatingMode` keeps it unless the control
- * sets one, and gets power, its transition and that mode alone. */
+ * sets one, and gets power, its transition and that mode alone. A unit in a
+ * mode of `DSIOT_OPERATING_MODE_ALIASES` keeps that value too, which it is
+ * not known to take as a write, and gets the leaves of the mode it stands
+ * for: see UNSUPPORTED.md. */
 export function applyDsiotControl(
   values: Record<string, string>,
   control: DaikinControl,
@@ -400,15 +400,12 @@ export function applyDsiotControl(
       path: DSIOT_PATHS.powerTransition,
       value:
         power === currentPower
-          ? POWER_TRANSITIONS.unchanged
+          ? DSIOT_POWER_TRANSITION_CODES.unchanged
           : power
-            ? POWER_TRANSITIONS.turningOn
-            : POWER_TRANSITIONS.turningOff,
+            ? DSIOT_POWER_TRANSITION_CODES.turningOn
+            : DSIOT_POWER_TRANSITION_CODES.turningOff,
     },
-    {
-      path: DSIOT_PATHS.mode,
-      value: mode === undefined ? heldMode : encodeDsiotMode(mode),
-    },
+    { path: DSIOT_PATHS.mode, value: heldMode },
   ];
   // Which leaves a mode outside the model reads and writes is not known.
   if (mode === undefined) {

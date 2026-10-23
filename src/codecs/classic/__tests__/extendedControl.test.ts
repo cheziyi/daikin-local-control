@@ -12,6 +12,9 @@ import {
   encodeClassicSpecialMode,
   encodeClassicTerminalKey,
   encodeClassicTerminalScope,
+  parseClassicDemandControl,
+  parseClassicEnergyPrice,
+  parseClassicEnergyTarget,
   parseClassicHolidayMode,
   parseClassicLed,
   parseClassicMetadata,
@@ -79,6 +82,13 @@ describe("encodeClassicSpecialMode", () => {
     });
   });
 
+  it("writes heat plus as spmode_kind=4", () => {
+    expect(encodeClassicSpecialMode("heatPlus", true)).toEqual({
+      set_spmode: "1",
+      spmode_kind: "4",
+    });
+  });
+
   it("writes streamer as en_streamer alone", () => {
     expect(encodeClassicSpecialMode("streamer", true)).toEqual({
       en_streamer: "1",
@@ -129,14 +139,14 @@ describe("encodeClassicEnergyPrice", () => {
     });
   });
 
-  it("writes the hundredths as a number, without a leading zero", () => {
+  it("writes the hundredths as two digits", () => {
     expect(encodeClassicEnergyPrice(1.05)).toEqual({
       price_int: "1",
-      price_dec: "5",
+      price_dec: "05",
     });
     expect(encodeClassicEnergyPrice(4)).toEqual({
       price_int: "4",
-      price_dec: "0",
+      price_dec: "00",
     });
   });
 
@@ -147,7 +157,7 @@ describe("encodeClassicEnergyPrice", () => {
     });
     expect(encodeClassicEnergyPrice(1.999)).toEqual({
       price_int: "2",
-      price_dec: "0",
+      price_dec: "00",
     });
   });
 });
@@ -250,5 +260,55 @@ describe("parseClassicMetadata", () => {
       name: "",
       enabled: false,
     });
+  });
+});
+
+describe("parseClassicDemandControl", () => {
+  it("reads en_demand, max_pow and the mode", () => {
+    expect(
+      parseClassicDemandControl({
+        demand_type: "1",
+        en_demand: "1",
+        mode: "2",
+        max_pow: "85",
+      }),
+    ).toEqual({ enabled: true, maxPowerInPercent: 85, mode: "auto" });
+    expect(
+      parseClassicDemandControl({ en_demand: "0", mode: "0", max_pow: "100" }),
+    ).toEqual({ enabled: false, maxPowerInPercent: 100, mode: "manual" });
+  });
+
+  it("reads null without en_demand or max_pow, or with a mode outside the model", () => {
+    expect(parseClassicDemandControl({ mode: "0", max_pow: "70" })).toBeNull();
+    expect(parseClassicDemandControl({ en_demand: "1", mode: "0" })).toBeNull();
+    expect(
+      parseClassicDemandControl({ en_demand: "1", mode: "1", max_pow: "70" }),
+    ).toBeNull();
+    expect(parseClassicDemandControl({})).toBeNull();
+  });
+});
+
+describe("parseClassicEnergyPrice", () => {
+  it("reads price_int and price_dec as units and hundredths", () => {
+    expect(parseClassicEnergyPrice({ price_int: "1", price_dec: "05" })).toBe(
+      1.05,
+    );
+    expect(parseClassicEnergyPrice({ price_int: "0", price_dec: "30" })).toBe(
+      0.3,
+    );
+  });
+
+  it("reads null without either field", () => {
+    expect(parseClassicEnergyPrice({ price_int: "1" })).toBeNull();
+    expect(parseClassicEnergyPrice({ price_dec: "05" })).toBeNull();
+    expect(parseClassicEnergyPrice({})).toBeNull();
+  });
+});
+
+describe("parseClassicEnergyTarget", () => {
+  it("reads the target, and null without one or for one that is not a number", () => {
+    expect(parseClassicEnergyTarget({ target: "120" })).toBe(120);
+    expect(parseClassicEnergyTarget({ target: "-" })).toBeNull();
+    expect(parseClassicEnergyTarget({})).toBeNull();
   });
 });

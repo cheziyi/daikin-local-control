@@ -41,8 +41,9 @@ export const DSIOT_TARGETS = {
 export const DSIOT_ADAPTER_TYPE = "GPF";
 
 /** `cdev` in a discovery reply from a DSIOT adapter whose unit is an air
- * cleaner. */
-export const DSIOT_AIR_CLEANER_DEVICES: readonly string[] = ["1D", "CJ"];
+ * conditioner. A reply without one is an air conditioner's as well; `1D` and
+ * `CJ` are an air cleaner's. */
+export const DSIOT_AIR_CONDITIONER_DEVICES: readonly string[] = ["RA", "NA"];
 
 /** Dotted paths into the `adp_i` and `adp_d` trees. The MAC address and the
  * version hold the value a classic adapter sends in `basic_info`, and the
@@ -71,6 +72,8 @@ export const DSIOT_PATHS = {
   model: "dgc_status.e_1002.e_A001.p_0D",
   modelType: "dgc_status.e_1002.e_A001.p_07",
   energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
+  /** Holds 0 on a unit with the special air outlet. */
+  specialOutlet: "dgc_status.e_1002.e_3003.p_43",
 } as const;
 
 /** What a leaf that is on or off holds, such as the power. */
@@ -80,12 +83,21 @@ export const DSIOT_OFF = "00";
 /** `DSIOT_PATHS.modelType` on a unit that only cools. */
 export const DSIOT_COOLING_ONLY_MODEL_TYPE = "01";
 
-/** Each leaf holds `01` while its mode is on. Powerful is on the outdoor
- * edge. */
+/** `DSIOT_PATHS.modelType` on a heat pump. */
+export const DSIOT_HEAT_PUMP_MODEL_TYPE = "00";
+
+/** The header that carries the local password, as `DSIOT_LOCAL_PASSWORD_SCHEME`
+ * and the code itself, not base64. */
+export const DSIOT_LOCAL_PASSWORD_HEADER = "Authorization";
+export const DSIOT_LOCAL_PASSWORD_SCHEME = "Basic";
+
+/** Each leaf holds `01` while its mode is on, and has `pt` 2 on a unit that
+ * takes the mode. Powerful is on the outdoor edge. */
 export const DSIOT_SPECIAL_MODE_PATHS: Record<SpecialMode, string> = {
   powerful: "dgc_status.e_1003.e_3002.p_44",
   econo: "dgc_status.e_1002.e_3003.p_24",
   streamer: "dgc_status.e_1002.e_3003.p_20",
+  heatPlus: "dgc_status.e_1002.e_3003.p_1C",
 };
 
 export interface DsiotSetpoint {
@@ -184,6 +196,21 @@ export const DSIOT_OPERATING_MODE_CODES: Record<OperatingMode, string> = {
   dehumidify: "0500",
 };
 
+/** The other mode values an adapter reports, and the mode whose leaves each
+ * one runs on. A write sends the value back as it came, which the adapter is
+ * not known to take: see UNSUPPORTED.md. */
+export const DSIOT_OPERATING_MODE_ALIASES: Record<string, OperatingMode> = {
+  "0900": "cool",
+  "0A00": "heat",
+};
+
+/** What `DSIOT_PATHS.powerTransition` is written as, beside the power. */
+export const DSIOT_POWER_TRANSITION_CODES = {
+  turningOn: "00",
+  turningOff: "01",
+  unchanged: "02",
+} as const;
+
 export const DSIOT_FAN_SPEED_CODES: Record<FanSpeed, string> = {
   auto: "0A00",
   silent: "0B00",
@@ -202,6 +229,7 @@ export const DSIOT_LOUVER_VALUES = {
   swing: 15,
   auto: 16,
   naturalWind: 19,
+  circulating: 20,
   floorWarming: 25,
 } as const;
 
@@ -224,6 +252,7 @@ export const DSIOT_VERTICAL_POSITION_VALUES: Partial<
   naturalWind: DSIOT_LOUVER_VALUES.naturalWind,
   auto: DSIOT_LOUVER_VALUES.auto,
   floorWarming: DSIOT_LOUVER_VALUES.floorWarming,
+  circulating: DSIOT_LOUVER_VALUES.circulating,
 };
 
 /** The value each `HorizontalPosition` is held as. `stop` and a fixed position

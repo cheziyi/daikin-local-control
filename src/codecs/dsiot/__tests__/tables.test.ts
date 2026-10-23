@@ -19,7 +19,7 @@ describe("the DSIOT tables", () => {
         outdoorStatus: "/dsiot/edge/adr_0200.dgc_status?filter=pv,pt,md",
       },
       DSIOT_ADAPTER_TYPE: "GPF",
-      DSIOT_AIR_CLEANER_DEVICES: ["1D", "CJ"],
+      DSIOT_AIR_CONDITIONER_DEVICES: ["RA", "NA"],
       DSIOT_ADAPTER_PATHS: {
         name: "adp_d.name",
         macAddress: "adp_i.mac",
@@ -40,14 +40,19 @@ describe("the DSIOT tables", () => {
         model: "dgc_status.e_1002.e_A001.p_0D",
         modelType: "dgc_status.e_1002.e_A001.p_07",
         energyMonitoring: "dgc_status.e_1002.e_A011.p_01",
+        specialOutlet: "dgc_status.e_1002.e_3003.p_43",
       },
       DSIOT_ON: "01",
       DSIOT_OFF: "00",
       DSIOT_COOLING_ONLY_MODEL_TYPE: "01",
+      DSIOT_HEAT_PUMP_MODEL_TYPE: "00",
+      DSIOT_LOCAL_PASSWORD_HEADER: "Authorization",
+      DSIOT_LOCAL_PASSWORD_SCHEME: "Basic",
       DSIOT_SPECIAL_MODE_PATHS: {
         powerful: "dgc_status.e_1003.e_3002.p_44",
         econo: "dgc_status.e_1002.e_3003.p_24",
         streamer: "dgc_status.e_1002.e_3003.p_20",
+        heatPlus: "dgc_status.e_1002.e_3003.p_1C",
       },
       DSIOT_MODE_NODE: "dgc_status.e_1002.e_3001",
       DSIOT_MODE_PATHS: {
@@ -92,6 +97,12 @@ describe("the DSIOT tables", () => {
         auto: "0300",
         dehumidify: "0500",
       },
+      DSIOT_OPERATING_MODE_ALIASES: { "0900": "cool", "0A00": "heat" },
+      DSIOT_POWER_TRANSITION_CODES: {
+        turningOn: "00",
+        turningOff: "01",
+        unchanged: "02",
+      },
       DSIOT_FAN_SPEED_CODES: {
         auto: "0A00",
         silent: "0B00",
@@ -106,6 +117,7 @@ describe("the DSIOT tables", () => {
         swing: 15,
         auto: 16,
         naturalWind: 19,
+        circulating: 20,
         floorWarming: 25,
       },
       DSIOT_FIXED_LOUVER_VALUES: [
@@ -119,6 +131,7 @@ describe("the DSIOT tables", () => {
         naturalWind: 19,
         auto: 16,
         floorWarming: 25,
+        circulating: 20,
       },
       DSIOT_HORIZONTAL_POSITION_VALUES: { swing: 15, auto: 16 },
       DSIOT_HUMIDITY_OFF: "00",

@@ -4,13 +4,15 @@ import type {
   DaikinState,
   FanSpeed,
   OperatingMode,
-  SwingMode,
+  VerticalPosition,
 } from "../../models/state.js";
 import {
   AIRBASE_FAN_SPEED_CODES,
   AIRBASE_NO_SETPOINT,
   AIRBASE_OPERATING_MODE_CODES,
-  AIRBASE_SWING_MODE_CODES,
+  AIRBASE_VERTICAL_POSITION_ALIASES,
+  AIRBASE_VERTICAL_POSITION_CODES,
+  type AirbaseVerticalPosition,
 } from "./tables.js";
 
 // Maps between `DaikinState` and an Airbase adapter's `control_info` fields,
@@ -18,8 +20,8 @@ import {
 //
 // The unit remembers a setpoint, a fan and a direction for cool and for heat
 // alone: `dt2`, `dfr2`, `dfd2`, `auto2` and `airside2` for cool, and the same
-// fields ending in 1 for heat. Auto, fan and dehumidify run on one of the
-// two, the one `bk_auto` names.
+// fields ending in 1 for heat. Cool and heat run on their own memory, and
+// auto, fan and dehumidify on the one `bk_auto` names.
 
 const OPERATING_MODES_BY_CODE: Record<string, OperatingMode> =
   Object.fromEntries(
@@ -36,12 +38,15 @@ const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(
   ]),
 );
 
-const SWING_MODES_BY_CODE: Record<string, SwingMode> = Object.fromEntries(
-  Object.entries(AIRBASE_SWING_MODE_CODES).map(([swing, code]) => [
-    code,
-    swing as SwingMode,
-  ]),
-);
+const VERTICAL_POSITIONS_BY_CODE: Record<string, VerticalPosition> = {
+  ...Object.fromEntries(
+    Object.entries(AIRBASE_VERTICAL_POSITION_CODES).map(([position, code]) => [
+      code,
+      position as VerticalPosition,
+    ]),
+  ),
+  ...AIRBASE_VERTICAL_POSITION_ALIASES,
+};
 
 const ON = "1";
 const OFF = "0";
@@ -49,18 +54,21 @@ const OFF = "0";
 const AIRSIDE_FAN_SPEED = AIRBASE_FAN_SPEED_CODES.level1;
 
 /** Turns a `get_control_info` reply into a `DaikinState`. A `mode` or `f_rate`
- * outside the model reads as `auto`, and an `f_dir` outside it as `off`. It
- * reports no humidity setting, louver position or special mode: an Airbase
- * unit is not known to have any. */
+ * outside the model reads as `auto`. `f_dir` is the vertical louver's
+ * position, one of `position1` to `position5` or `swing`, or `stop` while
+ * the louver is off, and `null` for a value outside those; `swingMode` is
+ * `vertical` while it swings. It reports no humidity setting, horizontal
+ * position or special mode: an Airbase unit is not known to have any. */
 export function parseAirbaseState(fields: Record<string, string>): DaikinState {
+  const verticalPosition = VERTICAL_POSITIONS_BY_CODE[fields.f_dir ?? ""];
   return {
     power: fields.pow === ON,
     mode: OPERATING_MODES_BY_CODE[fields.mode ?? ""] ?? "auto",
     targetTemperatureInC: parseNumeric(fields.stemp),
     targetHumidity: null,
     fanSpeed: FAN_SPEEDS_BY_CODE[fields.f_rate ?? ""] ?? "auto",
-    swingMode: SWING_MODES_BY_CODE[fields.f_dir ?? ""] ?? "off",
-    verticalPosition: null,
+    swingMode: verticalPosition === "swing" ? "vertical" : "off",
+    verticalPosition: verticalPosition ?? null,
     horizontalPosition: null,
     specialModes: [],
   };
@@ -91,9 +99,12 @@ export function parseAirbaseAirside(fields: Record<string, string>): boolean {
  * `set_control_info` query: power, mode, setpoint, humidity, fan speed, fan
  * auto, airside and direction, every time. When the mode changes, the
  * setpoint, the fan and the direction come from what the unit remembers for
- * cool or for heat. It drops a `targetTemperatureInC` in fan and dehumidify,
- * every `targetHumidity` and louver position, and sends `shum` back as the
- * unit holds it. A `fanSpeed` switches airside off and keeps fan auto. */
+ * cool or for heat. It writes the setpoint as a whole number of degrees,
+ * rounded. It drops a `targetTemperatureInC` in fan and dehumidify, every
+ * `targetHumidity`, `swingMode` and `horizontalPosition`, and a
+ * `verticalPosition` outside `position1` to `position5` and `swing`, and
+ * sends `shum` back as the unit holds it. A `fanSpeed` switches airside off
+ * and keeps fan auto. */
 export function applyAirbaseControl(
   current: Record<string, string>,
   control: DaikinControl,
@@ -135,9 +146,9 @@ function buildControl(
       : AIRBASE_OPERATING_MODE_CODES[control.mode];
   const modeChanged = mode !== currentMode;
 
-  // A change to cool or to heat makes that mode the one the others run on.
-  const backing =
-    modeChanged && (mode === cool || mode === heat) ? mode : current.bk_auto;
+  // Cool and heat run on their own memory, and name it in `bk_auto` for the
+  // other modes to run on.
+  const backing = mode === cool || mode === heat ? mode : current.bk_auto;
   // Which of the two memories applies: heat's, or cool's for anything else.
   const memory = (backing || mode) === heat ? heat : cool;
   const remembered = (field: string, memoryPrefix: string, fallback: string) =>
@@ -155,7 +166,7 @@ function buildControl(
     mode === dehumidify
       ? AIRBASE_NO_SETPOINT
       : control.targetTemperatureInC != null && mode !== fanMode
-        ? control.targetTemperatureInC.toFixed(1)
+        ? String(Math.round(control.targetTemperatureInC))
         : remembered("stemp", "dt", AIRBASE_NO_SETPOINT);
   // Each mode's setpoint is written to its own memory as well, and auto's to
   // the memory of the mode it runs on.
@@ -202,12 +213,18 @@ function buildControl(
     next[`airside${memory}`] = next.f_airside;
   }
 
+  const direction =
+    control.verticalPosition != null &&
+    control.verticalPosition in AIRBASE_VERTICAL_POSITION_CODES
+      ? AIRBASE_VERTICAL_POSITION_CODES[
+          control.verticalPosition as AirbaseVerticalPosition
+        ]
+      : undefined;
   next.f_dir =
-    control.swingMode === undefined
-      ? remembered("f_dir", "dfd", AIRBASE_SWING_MODE_CODES.off)
-      : AIRBASE_SWING_MODE_CODES[control.swingMode];
-  if (control.swingMode !== undefined) {
-    next[`dfd${memory}`] = next.f_dir;
+    direction ??
+    remembered("f_dir", "dfd", AIRBASE_VERTICAL_POSITION_CODES.position1);
+  if (direction !== undefined) {
+    next[`dfd${memory}`] = direction;
   }
   return next;
 }

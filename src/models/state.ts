@@ -47,10 +47,12 @@ export const VERTICAL_POSITIONS = [
   "naturalWind",
   "auto",
   "floorWarming",
+  "circulating",
 ] as const;
 
 /** On a DSIOT adapter, `position1` to `position5` are the first five fixed
- * positions the unit takes, in the adapter's order. */
+ * positions the unit takes, in the adapter's order. `circulating` is the
+ * circulating airflow. */
 export type VerticalPosition = (typeof VERTICAL_POSITIONS)[number];
 
 export const HORIZONTAL_POSITIONS = [
@@ -78,8 +80,14 @@ export type HumiditySetting = (typeof HUMIDITY_SETTINGS)[number];
  * `DaikinCapabilities.targetHumidities` lists which of them a unit takes. */
 export type TargetHumidity = HumiditySetting | { percent: number };
 
-export const SPECIAL_MODES = ["powerful", "econo", "streamer"] as const;
+export const SPECIAL_MODES = [
+  "powerful",
+  "econo",
+  "streamer",
+  "heatPlus",
+] as const;
 
+/** `heatPlus` is taken in heat alone. */
 export type SpecialMode = (typeof SPECIAL_MODES)[number];
 
 export interface DaikinState {

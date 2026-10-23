@@ -89,7 +89,7 @@ such as `1.2.51`, when the adapter reports them: key a stored device on
 | It | So |
 | --- | --- |
 | Resolves after `timeoutInMs`, never earlier | Pass `discoverDevices({ timeoutInMs: 1000 })` to wait less than the default 3000 |
-| Broadcasts to `255.255.255.255` | It does not find an adapter on another subnet or VLAN |
+| Broadcasts to `255.255.255.255`, and to the broadcast address of each network this machine is on | It finds an adapter on each of those networks, and none on another subnet or VLAN |
 | Keeps the adapters of air conditioners alone | It leaves out the adapter of an air cleaner, a water heater or another appliance, which answers the same broadcast |
 | Asks each classic adapter over HTTP whether it is an Airbase adapter, which replies to the broadcast as a classic one does | It resolves later than `timeoutInMs` while an adapter is slow to answer, by 3000 ms at most for each request after up to 750 ms of retrying a dropped connection, and reports as `classic` one that does not answer. An Airbase device requires no registration and no child lock code, whatever the adapter's reply says |
 | Binds the first free UDP port from 30000 to 30050 | Calls made at the same time each get every reply. It rejects with the socket's error when none of the ports is free, or when the socket fails |
@@ -181,9 +181,9 @@ label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPasswo
 | `targetHumidity` | `off`, `autoLow`, `auto`, `autoHigh` or `continuous`, or `null` when the unit has no humidity setting. A Japanese unit set to a percentage reads as `{ percent: 50 }`; `getCapabilities()` never lists a percentage, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `fanSpeed` | `auto`, `silent`, or `level1` to `level5` |
 | `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
-| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto` or `floorWarming`, or `null` where the unit reports none |
+| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto`, `floorWarming` or `circulating`, or `null` where the unit reports none. `getCapabilities()` never lists `naturalWind`, `auto` or `circulating`, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
-| `specialModes` | Those of `powerful`, `econo` and `streamer` that are on, empty when none is |
+| `specialModes` | Those of `powerful`, `econo`, `streamer` and `heatPlus` that are on, empty when none is |
 
 `getCapabilities()` resolves with a `DaikinCapabilities`, which lists the
 values this unit takes under the plural of the state field each one limits:
@@ -219,14 +219,15 @@ given, whether or not the unit lists it.
 | `targetTemperatureInC` | In `fan` and `dehumidify` |
 | `targetHumidity` | In `fan` |
 | `fanSpeed` | In `dehumidify`, and on a DSIOT adapter in `cool` while a humidity setting is on: the fan runs on `auto` |
-| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position. On an Airbase adapter, always |
+| `swingMode` | On an Airbase adapter, always: set `verticalPosition` to `swing` or to a position instead |
+| `verticalPosition`, `horizontalPosition` | On a classic adapter, when the unit has no 3D airflow. On a DSIOT adapter, a fixed vertical position the unit lacks, and every fixed horizontal position. On an Airbase adapter, every horizontal position and a vertical one outside `position1` to `position5` and `swing` |
 
 An Airbase adapter also drops every `targetHumidity`, and a
 `targetTemperatureInC` in `fan` as well as in `dehumidify`.
 
 `setState()` rounds `targetTemperatureInC` to the nearest step the adapter
-takes: a whole degree on a classic adapter, so 23.5 is sent as 24, and half a
-degree on a DSIOT adapter, so 23.3 is sent as 23.5.
+takes: a whole degree on a classic or an Airbase adapter, so 23.5 is sent as
+24, and half a degree on a DSIOT adapter, so 23.3 is sent as 23.5.
 
 `setState()` takes no `specialModes`: turn one on or off with
 `setSpecialMode()`, which sends a request of its own. Check the mode against
@@ -272,6 +273,7 @@ if (client instanceof ClassicDaikinClient) {
   });
   await client.setOutOfHomeAccess(false); // home network only
   await client.setEnergyPrice(0.3); // per kWh
+  await client.setEnergyTarget(120); // a month's cost, in the price's currency
   await client.setMetadata({
     name: "Living Room",
     group: { name: "Upstairs", enabled: true },
@@ -289,6 +291,8 @@ Read a setting back with the matching `get` method:
 | --- | --- |
 | `getLed()`, `getHolidayMode()`, `getOutOfHomeAccess()` | `true` or `false`, or `null` when the adapter does not report it |
 | `getMetadata()` | `{ name, icon, group }`, without the fields the adapter does not report |
+| `getDemandControl()` | `{ enabled, maxPowerInPercent, mode }`, or `null` when the adapter reports none or a mode outside `manual` and `auto` |
+| `getEnergyPrice()`, `getEnergyTarget()` | A number, or `null` when the adapter does not report it |
 
 [UNSUPPORTED.md](UNSUPPORTED.md) lists the endpoints without a typed method and
 what is not known about each.
@@ -331,7 +335,11 @@ if (client instanceof AirbaseDaikinClient) {
 A `fanSpeed` in `setState()` switches airside off and keeps fan auto.
 
 Only a unit with zones takes fan auto and airside, and it takes no `auto` fan
-speed and no `swingMode`: `getCapabilities()` lists what a unit takes.
+speed and no louver position: `getCapabilities()` lists what a unit takes. A
+unit without zones holds its louver at one of `position1` to `position5` or
+at `swing`, set through `verticalPosition`, and reports `stop` while the
+louver is off, which `setState()` drops; `swingMode` reads `vertical` while it
+swings, and `setState()` takes none.
 
 ### Errors and retries
 
@@ -347,12 +355,13 @@ A client method that fails rejects with a `DaikinError`; branch on
 | 501 | `AirbaseDaikinClient.setSpecialMode()`: an Airbase adapter has no request for a special mode |
 | Any other | The adapter's own HTTP status, such as 403 |
 
-Four failures are not a `DaikinError`: `discoverDevices()` rejects with the
+Five failures are not a `DaikinError`: `discoverDevices()` rejects with the
 socket's error, `createDaikinClient()` throws an `Error` for a
 [terminal uuid](#credentials) in the wrong form, `multireqUpdate()` throws
 an `Error` for a path that names a resource without a leaf, such as
-`dgc_status`, and `setZone()` rejects with an `Error` for an index the unit
-has no zone at.
+`dgc_status`, `setZone()` rejects with an `Error` for an index the unit has
+no zone at, and every method rejects with an `Error` without sending once
+`dispose()` has been called.
 
 Only a `DaikinConnectionError` is retried, up to five times by default.
 [DESIGN.md](DESIGN.md#retries) says why.
@@ -404,7 +413,7 @@ Describe the adapter and its unit in the types the clients resolve with:
 | Option | Holds | Defaults to |
 | --- | --- | --- |
 | `deviceInfo` | `name`, `macAddress` and `firmwareVersion`, as `getDeviceInfo()` reads them | A name of `Simulator` |
-| `unit` | What the unit has: see below | A heat pump with every fan speed, swing on both axes and all three special modes |
+| `unit` | What the unit has: see below | A heat pump with every fan speed, swing on both axes and all four special modes |
 | `state` | Any fields of a `DaikinState`, `specialModes` included | Off, in cool at 24 °C, on the auto fan speed |
 | `sensors` | Any fields of a `DaikinSensors`; `null` is a reading the unit lacks | 26 °C and 55 % indoors, 30 °C outdoors |
 
@@ -414,7 +423,7 @@ Describe the adapter and its unit in the types the clients resolve with:
 | `fan` | `false` for a unit whose fan speed cannot be set | `true` |
 | `fanLevels` | 2, 3 or 5 fan levels. Classic simulator only | 5 |
 | `swing` | `none`, `vertical` or `both` | `both` |
-| `specialModes` | Those of `powerful`, `econo` and `streamer` the unit takes | All three |
+| `specialModes` | Those of `powerful`, `econo`, `streamer` and `heatPlus` the unit takes | All four |
 | `coolTemperaturesInC`, `heatTemperaturesInC` | `{ min, max }` | 18 to 32 and 10 to 30 |
 
 `setState()` and `setSensors()` change a running simulator the same way.
@@ -426,7 +435,8 @@ as a `verticalPosition` on a unit without fixed louver positions.
 `startAirbaseSimulator()` takes `deviceInfo`, `state` and `sensors` as the
 other two do, and a `unit` of its own. It reports no humidity unless
 `sensors` gives one, and its `setState()` throws an `Error` for a
-`targetHumidity`, a louver position or a special mode.
+`targetHumidity`, a `swingMode`, a `horizontalPosition`, a special mode, and a
+`verticalPosition` outside `position1` to `position5` and `swing`.
 
 ```ts
 import { startAirbaseSimulator } from "daikin-local-control/simulators";
@@ -528,9 +538,11 @@ Three limits apply, and [UNSUPPORTED.md](UNSUPPORTED.md) says what is not known
 about each:
 
 - **Europe**: power, mode, setpoint, fan, swing and special modes go to a
-  classic adapter there as they do elsewhere. `getCapabilities()` follows the
-  rules of the other markets, and which adapters there speak HTTPS is not
-  known.
+  classic adapter there as they do elsewhere. An adapter there takes them over
+  plain HTTP, with no registration and no child lock code; the client sends a
+  terminal uuid all the same. `getCapabilities()` follows the rules of the
+  other markets, and whether an adapter there that reports `en_secure=1`
+  speaks HTTPS is not known.
 - **A DSIOT adapter in Europe** (BRP069C series) is not covered: it may not
   answer on the LAN until it is switched on.
 - **An Airbase adapter** is told from a classic one by how it answers over

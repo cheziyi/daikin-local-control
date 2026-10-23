@@ -185,19 +185,45 @@ describe("parseClassicCapabilities", () => {
       expect(parseClassicCapabilities(BASE).fanSpeeds).toEqual([]);
     });
 
-    it("offers none without a region, or for reg=jp", () => {
-      expect(
-        parseClassicCapabilities({ cpv: "3", en_frate: "1" }).fanSpeeds,
-      ).toEqual([]);
+    it("offers none for reg=jp, whatever its letter case", () => {
       expect(parseClassicCapabilities({ ...fan, reg: "jp" }).fanSpeeds).toEqual(
+        [],
+      );
+      expect(parseClassicCapabilities({ ...fan, reg: "JP" }).fanSpeeds).toEqual(
         [],
       );
     });
 
-    it("lists a reg=th subtype=qa unit's speeds without en_frate", () => {
+    it("reads a unit without a region as one sold for th", () => {
+      expect(
+        parseClassicCapabilities({ cpv: "3", en_frate: "1" }).fanSpeeds,
+      ).toEqual(parseClassicCapabilities({ ...fan, reg: "th" }).fanSpeeds);
+    });
+
+    it("lists a reg=th subtype=qa unit's speeds without en_frate before cpv 2", () => {
       expect(
         parseClassicCapabilities({
           ...BASE,
+          cpv: "1",
+          reg: "TH",
+          subtype: "qa",
+          frate_steps: "2",
+        }).fanSpeeds,
+      ).toEqual(["auto", "level1", "level5"]);
+    });
+
+    it("lists a reg=th subtype=qa unit's speeds only with en_frate from cpv 2", () => {
+      expect(
+        parseClassicCapabilities({
+          ...BASE,
+          reg: "th",
+          subtype: "qa",
+          frate_steps: "2",
+        }).fanSpeeds,
+      ).toEqual([]);
+      expect(
+        parseClassicCapabilities({
+          ...fan,
           reg: "th",
           subtype: "qa",
           frate_steps: "2",
@@ -224,11 +250,11 @@ describe("parseClassicCapabilities", () => {
       ).toEqual([]);
     });
 
-    it("offers none without a region", () => {
+    it("offers them to a unit without a region", () => {
       expect(
         parseClassicCapabilities({ cpv: "3", en_fdir: "1", s_fdir: "3" })
           .swingModes,
-      ).toEqual([]);
+      ).toEqual(["off", "vertical", "horizontal", "both"]);
     });
 
     it.each(["0", "1"])("reads s_fdir alone at cpv %s", (cpv) => {
@@ -434,14 +460,14 @@ describe("parseClassicCapabilities", () => {
       },
     );
 
-    it("lists econo in every mode but fan", () => {
+    it("lists econo in every mode but fan, and heat plus in heat alone", () => {
       expect(
-        parseClassicCapabilities({ ...MINOR, en_spmode: "7" }).specialModes,
+        parseClassicCapabilities({ ...MINOR, en_spmode: "15" }).specialModes,
       ).toEqual({
         auto: ["powerful", "econo", "streamer"],
         dehumidify: ["powerful", "econo", "streamer"],
         cool: ["powerful", "econo", "streamer"],
-        heat: ["powerful", "econo", "streamer"],
+        heat: ["powerful", "econo", "streamer", "heatPlus"],
         fan: ["powerful", "streamer"],
       });
     });
@@ -552,9 +578,9 @@ describe("takesClassicDirection", () => {
     ).toBe(true);
   });
 
-  it("is false without a region", () => {
+  it("is true without a region", () => {
     expect(
       takesClassicDirection({ cpv: "3", en_fdir: "1", en_fdir2: "1" }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
