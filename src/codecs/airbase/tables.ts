@@ -31,8 +31,9 @@ export type AirbaseVerticalPosition = Extract<
   "position1" | "position2" | "position3" | "position4" | "position5" | "swing"
 >;
 
-/** `f_dir`: five fixed louver positions and swing. The values 5 and 6 stand
- * for none of them: see UNSUPPORTED.md. */
+/** `f_dir`: five fixed louver positions and swing, the values a unit takes as
+ * a write. It reports 6 as well: see `AIRBASE_VERTICAL_POSITION_ALIASES`.
+ * What 5 stands for is not known: see UNSUPPORTED.md. */
 export const AIRBASE_VERTICAL_POSITION_CODES: Record<
   AirbaseVerticalPosition,
   string
@@ -43,6 +44,15 @@ export const AIRBASE_VERTICAL_POSITION_CODES: Record<
   position4: "3",
   position5: "4",
   swing: "7",
+};
+
+/** The other `f_dir` value an adapter reports, and the position it reads as:
+ * 6 while the louver is off. A write never sends it. */
+export const AIRBASE_VERTICAL_POSITION_ALIASES: Record<
+  string,
+  VerticalPosition
+> = {
+  "6": "stop",
 };
 
 /** What `stemp` holds in a mode without a setpoint, such as dehumidify. */

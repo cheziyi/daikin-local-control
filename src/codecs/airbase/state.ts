@@ -10,6 +10,7 @@ import {
   AIRBASE_FAN_SPEED_CODES,
   AIRBASE_NO_SETPOINT,
   AIRBASE_OPERATING_MODE_CODES,
+  AIRBASE_VERTICAL_POSITION_ALIASES,
   AIRBASE_VERTICAL_POSITION_CODES,
   type AirbaseVerticalPosition,
 } from "./tables.js";
@@ -37,13 +38,15 @@ const FAN_SPEEDS_BY_CODE: Record<string, FanSpeed> = Object.fromEntries(
   ]),
 );
 
-const VERTICAL_POSITIONS_BY_CODE: Record<string, VerticalPosition> =
-  Object.fromEntries(
+const VERTICAL_POSITIONS_BY_CODE: Record<string, VerticalPosition> = {
+  ...Object.fromEntries(
     Object.entries(AIRBASE_VERTICAL_POSITION_CODES).map(([position, code]) => [
       code,
       position as VerticalPosition,
     ]),
-  );
+  ),
+  ...AIRBASE_VERTICAL_POSITION_ALIASES,
+};
 
 const ON = "1";
 const OFF = "0";
@@ -52,10 +55,10 @@ const AIRSIDE_FAN_SPEED = AIRBASE_FAN_SPEED_CODES.level1;
 
 /** Turns a `get_control_info` reply into a `DaikinState`. A `mode` or `f_rate`
  * outside the model reads as `auto`. `f_dir` is the vertical louver's
- * position, one of `position1` to `position5` or `swing`, and `null` for a
- * value outside those; `swingMode` is `vertical` while it swings. It reports
- * no humidity setting, horizontal position or special mode: an Airbase unit
- * is not known to have any. */
+ * position, one of `position1` to `position5` or `swing`, or `stop` while
+ * the louver is off, and `null` for a value outside those; `swingMode` is
+ * `vertical` while it swings. It reports no humidity setting, horizontal
+ * position or special mode: an Airbase unit is not known to have any. */
 export function parseAirbaseState(fields: Record<string, string>): DaikinState {
   const verticalPosition = VERTICAL_POSITIONS_BY_CODE[fields.f_dir ?? ""];
   return {

@@ -197,7 +197,8 @@ export const DSIOT_OPERATING_MODE_CODES: Record<OperatingMode, string> = {
 };
 
 /** The other mode values an adapter reports, and the mode whose leaves each
- * one runs on. */
+ * one runs on. A write sends the value back as it came, which the adapter is
+ * not known to take: see UNSUPPORTED.md. */
 export const DSIOT_OPERATING_MODE_ALIASES: Record<string, OperatingMode> = {
   "0900": "cool",
   "0A00": "heat",

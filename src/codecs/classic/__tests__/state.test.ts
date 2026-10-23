@@ -403,12 +403,15 @@ describe("applyClassicControl", () => {
 
     it.each([
       ["00", "0"],
+      ["0-", "0"],
       ["S0", "1"],
       ["S-", "1"],
       ["0S", "2"],
       ["SS", "3"],
       ["F0", "6"],
-      ["3S", "2"],
+      ["F-", "6"],
+      ["3S", "0"],
+      ["AS", "0"],
       ["A0", "0"],
     ])(
       "takes f_dir from the new mode's ndfd=%s when it reports no dfd",
@@ -422,6 +425,24 @@ describe("applyClassicControl", () => {
         ).toBe(f_dir);
       },
     );
+
+    it("counts a fixed position in ndfd as stop on an adp_kind=4 unit, unless it is subtype=qa", () => {
+      const memory = { ...HEATING, ndfd3: "3S" };
+      expect(
+        applyClassicControl(
+          memory,
+          { mode: "cool" },
+          { ...DIRECTION, adp_kind: "4" },
+        ).f_dir,
+      ).toBe("2");
+      expect(
+        applyClassicControl(
+          memory,
+          { mode: "cool" },
+          { ...DIRECTION, adp_kind: "4", subtype: "qa", s_fdir: "1" },
+        ).f_dir,
+      ).toBe("0");
+    });
 
     it("prefers dfd to ndfd for f_dir", () => {
       expect(

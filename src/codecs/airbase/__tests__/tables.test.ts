@@ -30,6 +30,7 @@ describe("the Airbase tables", () => {
         position5: "4",
         swing: "7",
       },
+      AIRBASE_VERTICAL_POSITION_ALIASES: { "6": "stop" },
       AIRBASE_NO_SETPOINT: "--",
       AIRBASE_ZONE_LIST_SEPARATOR: ";",
       AIRBASE_ZONE_TEMPERATURE_FIELDS: { cool: "lztemp_c", heat: "lztemp_h" },

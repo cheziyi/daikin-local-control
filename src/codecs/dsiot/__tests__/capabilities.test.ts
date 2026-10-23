@@ -193,7 +193,7 @@ describe("parseDsiotCapabilities", () => {
       });
     });
 
-    it("reads the auto limits from p_1D's md.mi, a signed byte, and md.mx, capped at 30 °C", () => {
+    it("reads the auto minimum from p_1D's md.mi, a signed byte, and keeps the maximum at 30 °C", () => {
       const AUTO_SETPOINT = modeLeaf("p_1D");
 
       expect(
@@ -202,7 +202,7 @@ describe("parseDsiotCapabilities", () => {
           [`${AUTO_SETPOINT}.md.mi`]: "28",
           [`${AUTO_SETPOINT}.md.mx`]: "38",
         }).targetTemperaturesInC.auto,
-      ).toEqual({ min: 20, max: 28, step: 0.5 });
+      ).toEqual({ min: 20, max: 30, step: 0.5 });
       expect(
         parseDsiotCapabilities({
           ...UNIT,
@@ -273,20 +273,13 @@ describe("parseDsiotCapabilities", () => {
   });
 
   describe("louver positions", () => {
-    it("offers each vertical position whose value md.mx allows", () => {
+    it("offers each vertical position whose value md.mx allows, and never auto, natural wind or circulating", () => {
       expect(
         parseDsiotCapabilities({
           ...UNIT,
           [`${COOL_VERTICAL}.md.mx`]: louverMask(0, 15, 16, 19, 20, 25),
         }).verticalPositions,
-      ).toEqual([
-        "stop",
-        "swing",
-        "naturalWind",
-        "auto",
-        "floorWarming",
-        "circulating",
-      ]);
+      ).toEqual(["stop", "swing", "floorWarming"]);
       expect(
         parseDsiotCapabilities({
           ...UNIT,

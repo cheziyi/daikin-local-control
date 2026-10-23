@@ -174,6 +174,20 @@ export const CLASSIC_DEFAULT_REGION = "th";
 /** `f_dir` while the vertical louver is at `floorWarming`. */
 export const CLASSIC_FLOOR_WARMING_DIRECTION = "6";
 
+/** The `f_dir` an `ndfd` value stands for, on a unit that reports no `dfd`:
+ * the vertical louver's value, then the horizontal one's. A pair outside the
+ * table stands for 0. */
+export const CLASSIC_LOUVER_MEMORY_DIRECTIONS: Record<string, string> = {
+  "00": "0",
+  "0-": "0",
+  S0: "1",
+  "S-": "1",
+  "0S": "2",
+  SS: "3",
+  F0: "6",
+  "F-": "6",
+};
+
 /** `type` in `unregister_terminal`. */
 export const CLASSIC_TERMINAL_SCOPE_CODES: Record<TerminalScope, string> = {
   self: "0",

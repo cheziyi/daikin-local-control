@@ -95,6 +95,16 @@ describe("the classic tables", () => {
       CLASSIC_LOCAL_PASSWORD_PARAMETER: "lpw",
       CLASSIC_DEFAULT_REGION: "th",
       CLASSIC_FLOOR_WARMING_DIRECTION: "6",
+      CLASSIC_LOUVER_MEMORY_DIRECTIONS: {
+        "00": "0",
+        "0-": "0",
+        S0: "1",
+        "S-": "1",
+        "0S": "2",
+        SS: "3",
+        F0: "6",
+        "F-": "6",
+      },
       CLASSIC_TERMINAL_SCOPE_CODES: { self: "0", others: "1", all: "2" },
       CLASSIC_REMOTE_METHODS: { polling: "polling", homeOnly: "home only" },
     });

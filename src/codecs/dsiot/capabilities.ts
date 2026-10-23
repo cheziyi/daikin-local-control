@@ -48,9 +48,11 @@ type LouverAxis = "vertical" | "horizontal";
 
 /** Turns the flattened `adp_i` tree and the indoor and outdoor `dgc_status`
  * trees (with `pt` and `md`) into `DaikinCapabilities`. Setpoints count half
- * degrees, and the auto range caps at 30 °C whatever its `md.mx` says.
+ * degrees; the auto setpoint's maximum is 30 °C, and its `md.mx` is not read.
  * Without the outdoor tree, `specialModes` lists no `powerful`. It lists
- * heat plus in heat alone, and econo in every mode but fan: see
+ * heat plus in heat alone, and econo in every mode but fan, and
+ * `verticalPositions` leaves out `auto`, `naturalWind` and `circulating`,
+ * which a unit reports and is not known to take as a write: see
  * UNSUPPORTED.md. */
 export function parseDsiotCapabilities(
   values: Record<string, string>,
@@ -98,10 +100,7 @@ export function parseDsiotCapabilities(
       ? horizontalPositions(louverMask(values, "horizontal"))
       : [],
     targetTemperaturesInC: {
-      auto: offered(
-        "auto",
-        range(values, DSIOT_MODE_PATHS.auto.setpoint, 18, 30),
-      ),
+      auto: offered("auto", autoRange(values)),
       cool: offered(
         "cool",
         range(values, DSIOT_MODE_PATHS.cool.setpoint, 18, 32),
@@ -187,6 +186,14 @@ function swingModes(vertical: boolean, horizontal: boolean): SwingMode[] {
   return horizontal ? ["off", "horizontal"] : [];
 }
 
+// A unit reports these, and is not known to take a write of them: see
+// UNSUPPORTED.md.
+const READ_ONLY_VERTICAL_POSITIONS: readonly VerticalPosition[] = [
+  "auto",
+  "naturalWind",
+  "circulating",
+];
+
 // A unit that takes n fixed values offers the first n fixed positions, as
 // `parseDsiotState` names them by rank.
 function verticalPositions(mask: number): VerticalPosition[] {
@@ -196,6 +203,9 @@ function verticalPositions(mask: number): VerticalPosition[] {
   }
   const fixedCount = bitCount(mask & FIXED_LOUVER_MASK);
   return VERTICAL_POSITIONS.filter((position) => {
+    if (READ_ONLY_VERTICAL_POSITIONS.includes(position)) {
+      return false;
+    }
     const rank = FIXED_POSITIONS.indexOf(position);
     return rank === -1
       ? takes(mask, DSIOT_VERTICAL_POSITION_VALUES[position])
@@ -225,14 +235,29 @@ function range(
   fallbackMin: number,
   ceiling: number,
 ): TemperatureRange {
-  const min =
-    decodeDsiotLittleEndian(values[`${setpoint?.path}.md.mi`] ?? "") / 2;
-  const max =
-    decodeDsiotLittleEndian(values[`${setpoint?.path}.md.mx`] ?? "") / 2;
+  const min = limit(values, setpoint, "mi");
+  const max = limit(values, setpoint, "mx");
   const reported = Number.isFinite(min) && Number.isFinite(max);
   return {
     min: reported ? min : fallbackMin,
     max: reported ? Math.min(max, ceiling) : ceiling,
     step: 0.5,
   };
+}
+
+// The auto setpoint's minimum is its `md.mi`, 18 °C without one, and its
+// maximum is 30 °C: its `md.mx` is not read.
+function autoRange(values: Record<string, string>): TemperatureRange {
+  const min = limit(values, DSIOT_MODE_PATHS.auto.setpoint, "mi");
+  return { min: Number.isFinite(min) ? min : 18, max: 30, step: 0.5 };
+}
+
+function limit(
+  values: Record<string, string>,
+  setpoint: DsiotSetpoint | undefined,
+  bound: "mi" | "mx",
+): number {
+  return (
+    decodeDsiotLittleEndian(values[`${setpoint?.path}.md.${bound}`] ?? "") / 2
+  );
 }

@@ -126,9 +126,8 @@ and `get_model_info` fields and passing them to `parseClassicCapabilities`.
 - `parseClassicCapabilities` offers the fixed vertical positions only to a unit
   with five of them, so a unit on a DSIOT adapter taking three fixed values
   was offered none, while `parseDsiotState` reported it at `position2`.
-- The classic fields cannot carry what the trees say: `s_fdir_ud` has no bit
-  for `naturalWind` or `auto`, and the classic limits are whole degrees where a
-  DSIOT setpoint counts half degrees.
+- The classic fields cannot carry what the trees say: the classic limits are
+  whole degrees where a DSIOT setpoint counts half degrees.
 
 ## Target humidity
 

@@ -18,6 +18,7 @@ import {
   CLASSIC_FLOOR_WARMING_DIRECTION,
   CLASSIC_HORIZONTAL_POSITION_CODES,
   CLASSIC_HUMIDITY_SETTING_CODES,
+  CLASSIC_LOUVER_MEMORY_DIRECTIONS,
   CLASSIC_LOUVER_STOP,
   CLASSIC_LOUVER_SWING,
   CLASSIC_NO_SETPOINT,
@@ -225,7 +226,7 @@ export function applyClassicControl(
       control.swingMode === undefined
         ? ((modeChanged
             ? (current[`dfd${mode}`] ??
-              decodeLouverMemory(current[`ndfd${mode}`]))
+              decodeLouverMemory(current[`ndfd${mode}`], capabilityFields))
             : undefined) ??
           current.f_dir ??
           "")
@@ -247,13 +248,20 @@ function directionOf(vertical: string, horizontal: string): string {
 }
 
 // The `f_dir` an `ndfd<mode>` value stands for, on a unit that reports no
-// `dfd<mode>`. A fixed position counts as stop.
-function decodeLouverMemory(ndfd: string | undefined): string | undefined {
+// `dfd<mode>`. On an `adp_kind=4` unit that is not `subtype=qa`, a fixed
+// position 1 to 5 counts as stop first.
+function decodeLouverMemory(
+  ndfd: string | undefined,
+  capabilityFields: Record<string, string>,
+): string | undefined {
   if (ndfd === undefined || ndfd.length !== 2) {
     return undefined;
   }
-  const [vertical = "", horizontal = ""] = ndfd;
-  return directionOf(vertical, horizontal);
+  const memory =
+    capabilityFields.adp_kind === "4" && capabilityFields.subtype !== "qa"
+      ? ndfd.replaceAll(/[1-5]/g, "0")
+      : ndfd;
+  return CLASSIC_LOUVER_MEMORY_DIRECTIONS[memory] ?? "0";
 }
 
 function parseSpecialModes(adv: string | undefined): SpecialMode[] {

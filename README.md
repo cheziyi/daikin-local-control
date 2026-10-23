@@ -181,7 +181,7 @@ label, and it is not your Wi-Fi or Out-of-Home password. Pass it as `localPasswo
 | `targetHumidity` | `off`, `autoLow`, `auto`, `autoHigh` or `continuous`, or `null` when the unit has no humidity setting. A Japanese unit set to a percentage reads as `{ percent: 50 }`; `getCapabilities()` never lists a percentage, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `fanSpeed` | `auto`, `silent`, or `level1` to `level5` |
 | `swingMode` | `off`, `vertical`, `horizontal` or `both`: `vertical` moves the air up and down, `horizontal` left and right |
-| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto`, `floorWarming` or `circulating`, or `null` where the unit reports none |
+| `verticalPosition` | `stop`, `position1` to `position5`, `swing`, `naturalWind`, `auto`, `floorWarming` or `circulating`, or `null` where the unit reports none. `getCapabilities()` never lists `naturalWind`, `auto` or `circulating`, so `setState()` sends one unchecked: see [UNSUPPORTED.md](UNSUPPORTED.md) |
 | `horizontalPosition` | `stop`, `position1` to `position5`, `swing` or `auto`, or `null` where the unit reports none |
 | `specialModes` | Those of `powerful`, `econo`, `streamer` and `heatPlus` that are on, empty when none is |
 
@@ -337,8 +337,9 @@ A `fanSpeed` in `setState()` switches airside off and keeps fan auto.
 Only a unit with zones takes fan auto and airside, and it takes no `auto` fan
 speed and no louver position: `getCapabilities()` lists what a unit takes. A
 unit without zones holds its louver at one of `position1` to `position5` or
-at `swing`, set through `verticalPosition`; `swingMode` reads `vertical`
-while it swings, and `setState()` takes none.
+at `swing`, set through `verticalPosition`, and reports `stop` while the
+louver is off, which `setState()` drops; `swingMode` reads `vertical` while it
+swings, and `setState()` takes none.
 
 ### Errors and retries
 

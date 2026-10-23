@@ -74,12 +74,13 @@ describe("parseAirbaseState", () => {
       "level5",
       "silent",
     ]);
-    expect(["0", "1", "2", "3", "4", "7"].map(positionOf)).toEqual([
+    expect(["0", "1", "2", "3", "4", "6", "7"].map(positionOf)).toEqual([
       "position1",
       "position2",
       "position3",
       "position4",
       "position5",
+      "stop",
       "swing",
     ]);
   });
@@ -91,7 +92,7 @@ describe("parseAirbaseState", () => {
 
   it("reads a mode or fan speed outside the model as auto, and a direction as null", () => {
     expect(
-      parseAirbaseState({ mode: "HUM", f_rate: "9", f_dir: "6" }),
+      parseAirbaseState({ mode: "HUM", f_rate: "9", f_dir: "5" }),
     ).toMatchObject({
       mode: "auto",
       fanSpeed: "auto",
